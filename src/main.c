@@ -158,7 +158,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
     //image **alphabet = load_alphabet();            // image.c
     image **alphabet = NULL;
     network net = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
-    if (weightfile) {
+    if (weightfile)
+    {
         load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
     }
     //set_batch_network(&net, 1);                    // network.c
@@ -175,14 +176,18 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
     int j;
     float nms = .4;
     while (1) {
-        if (filename) {
+        if (filename)
+        {
             strncpy(input, filename, 256);
         }
-        else {
+        else
+        {
             printf("Enter Image Path: ");
             fflush(stdout);
             input = fgets(input, 256, stdin);
-            if (!input) return;
+            if (!input)
+                return;
+
             strtok(input, "\n");
         }
         image im = load_image(input, 0, 0, 3);            // image.c
@@ -191,7 +196,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
 
         box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
         float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
-        for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = calloc(l.classes, sizeof(float *));
+        for (j = 0; j < l.w*l.h*l.n; ++j)
+            probs[j] = calloc(l.classes, sizeof(float *));
 
         float *X = sized.data;
         time = clock();
@@ -230,7 +236,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
         draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
 
         save_image_png(im, "predictions");    // image.c
-        if (!dont_show) {
+        if (!dont_show)
+        {
             show_image(im, "predictions");    // image.c
         }
 

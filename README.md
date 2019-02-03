@@ -1,3 +1,22 @@
+# purpose
+  learning the deep learning
+  
+# how to run
+* open yolo_cpu.sln by visual studio 2017
+* build and run : yolo_cpu.exe detector test coco.names yolov3.cfg yolov3.weights -thresh 0.24 dog.jpg
+* show the result in the predictions.png
+
+
+
+
+
+
+
+
+
+
+
+
 # yolo2_light
 Light version of convolutional neural network Yolo v3 & v2 for objects detection with a minimum of dependencies (INT8-inference, BIT1-XNOR-inference)
 
