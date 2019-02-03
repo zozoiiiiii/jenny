@@ -3,7 +3,7 @@
   
 # how to run
 * open yolo_cpu.sln by visual studio 2017
-* build and run : yolo_cpu.exe detector test coco.names yolov3_tiny.cfg yolov3_tiny.weights -thresh 0.24 dog.jpg
+* build and run : yolo_cpu.exe detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.24 dog.jpg
 * show the result in the predictions.png
 
 
