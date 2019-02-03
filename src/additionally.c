@@ -966,6 +966,8 @@ void im2col_cpu_custom_bin(float* data_im,
     }
 }
 
+
+// 此处用__m256指令集加速
 void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
 {
     int i = 0;
@@ -984,7 +986,11 @@ void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
                 __m256 src256 = _mm256_loadu_ps(&x[i]);
                 __m256 mult256 = _mm256_mul_ps((src256), all256_01); // mult * 0.1
 
-                __m256i sign256 = _mm256_and_si256(_mm256_castps_si256(src256), all256_sing1); // check sign in 8 x 32-bit floats
+                // 256位紧缩整数（AVX） float -> int
+                __m256i tmp = _mm256_castps_si256(src256);
+
+                // float32, float32
+                __m256i sign256 = _mm256_and_si256(tmp, all256_sing1); // check sign in 8 x 32-bit floats
 
                 __m256 result256 = _mm256_blendv_ps(src256, mult256, _mm256_castsi256_ps(sign256)); // (sign>0) ? src : mult;
                 _mm256_storeu_ps(&x[i], result256);

@@ -35,9 +35,11 @@ void forward_convolutional_layer_cpu(layer l, network_state state)
     int i, f, j;
 
     // fill zero (ALPHA)
-    for (i = 0; i < l.outputs*l.batch; ++i) l.output[i] = 0;
+    for (i = 0; i < l.outputs*l.batch; ++i)
+        l.output[i] = 0;
 
-    if (l.xnor) {
+    if (l.xnor)
+    {
         if (!l.align_bit_weights)
         {
             binarize_weights(l.weights, l.n, l.c*l.size*l.size, l.binary_weights);

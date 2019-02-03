@@ -11,6 +11,8 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/version.hpp"
 
+
+
 #ifndef CV_VERSION_EPOCH
 #include "opencv2/videoio/videoio_c.h"
 #define OPENCV_VERSION CVAUX_STR(CV_VERSION_MAJOR)""CVAUX_STR(CV_VERSION_MINOR)""CVAUX_STR(CV_VERSION_REVISION)
@@ -157,25 +159,35 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
 {
     //image **alphabet = load_alphabet();            // image.c
     image **alphabet = NULL;
+
+    // 1. 网络配置，神经网络结构
     network net = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
     if (weightfile)
     {
+        // 2. 权重
         load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
     }
+
     //set_batch_network(&net, 1);                    // network.c
     srand(2222222);
     yolov2_fuse_conv_batchnorm(net);
     calculate_binary_weights(net);
-    if (quantized) {
+
+    // cancel here
+    if (quantized)
+    {
         printf("\n\n Quantinization! \n\n");
         quantinization_and_get_multipliers(net);
     }
+
     clock_t time;
     char buff[256];
     char *input = buff;
     int j;
     float nms = .4;
-    while (1) {
+    while (1)
+    {
+        // 3. open image
         if (filename)
         {
             strncpy(input, filename, 256);
@@ -211,6 +223,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
             network_predict_gpu_cudnn(net, X);
         }
 #else
+
+        // 4. predict, the key
 #ifdef OPENCL
         network_predict_opencl(net, X);
 #else
@@ -218,7 +232,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
             network_predict_quantized(net, X);    // quantized works only with Yolo v2
             nms = 0.2;
         }
-        else {
+        else
+        {
             network_predict_cpu(net, X);
         }
 #endif
@@ -226,15 +241,17 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
         printf("%s: Predicted in %f seconds.\n", input, (float)(clock() - time) / CLOCKS_PER_SEC); //sec(clock() - time));
         //get_region_boxes_cpu(l, 1, 1, thresh, probs, boxes, 0, 0);            // get_region_boxes(): region_layer.c
 
+        // 5. save to image or show directly
         //  nms (non maximum suppression) - if (IoU(box[i], box[j]) > nms) then remove one of two boxes with lower probability
         //if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);    // box.c
         //draw_detections_cpu(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes);    // draw_detections(): image.c
         float hier_thresh = 0.5;
         int ext_output = 1, letterbox = 0, nboxes = 0;
         detection *dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
-        if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
+        if (nms)
+            do_nms_sort(dets, nboxes, l.classes, nms);
 
+        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
         save_image_png(im, "predictions");    // image.c
         if (!dont_show)
         {
@@ -645,10 +662,11 @@ void run_detector(int argc, char **argv)
 int main(int argc, char **argv)
 {
 #ifdef _DEBUG
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
     int i;
-    for (i = 0; i < argc; ++i) {
+    for (i = 0; i < argc; ++i)
+    {
         if (!argv[i]) continue;
         strip(argv[i]);
     }
