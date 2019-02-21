@@ -8,6 +8,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 baby.jpg</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 dog.jpg</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
