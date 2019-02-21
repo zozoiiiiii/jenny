@@ -3388,7 +3388,8 @@ void load_convolutional_weights_cpu(layer l, FILE *fp)
 {
     int num = l.n*l.c*l.size*l.size;
     fread(l.biases, sizeof(float), l.n, fp);
-    if (l.batch_normalize && (!l.dontloadscales)) {
+    if (l.batch_normalize && (!l.dontloadscales))
+    {
         fread(l.scales, sizeof(float), l.n, fp);
         fread(l.rolling_mean, sizeof(float), l.n, fp);
         fread(l.rolling_variance, sizeof(float), l.n, fp);
@@ -3434,10 +3435,12 @@ void load_weights_upto_cpu(network *net, char *filename, int cutoff)
     fread(&major, sizeof(int), 1, fp);
     fread(&minor, sizeof(int), 1, fp);
     fread(&revision, sizeof(int), 1, fp);
-    if ((major * 10 + minor) >= 2) {
+    if ((major * 10 + minor) >= 2)
+    {
         fread(net->seen, sizeof(uint64_t), 1, fp);
     }
-    else {
+    else
+    {
         int iseen = 0;
         fread(&iseen, sizeof(int), 1, fp);
         *net->seen = iseen;
@@ -3445,10 +3448,14 @@ void load_weights_upto_cpu(network *net, char *filename, int cutoff)
     //int transpose = (major > 1000) || (minor > 1000);
 
     int i;
-    for (i = 0; i < net->n && i < cutoff; ++i) {
+    for (i = 0; i < net->n && i < cutoff; ++i)
+    {
         layer l = net->layers[i];
-        if (l.dontload) continue;
-        if (l.type == CONVOLUTIONAL) {
+        if (l.dontload)
+            continue;
+
+        if (l.type == CONVOLUTIONAL)
+        {
             load_convolutional_weights_cpu(l, fp);
         }
     }
@@ -3485,7 +3492,10 @@ convolutional_layer parse_convolutional(list *options, size_params params)
     int quantized = params.quantized;
     if (params.index == 0 || activation == LINEAR || (params.index > 1 && stride>1) || size==1)
         quantized = 0; // disable Quantized for 1st and last layers
-    convolutional_layer layer = make_convolutional_layer(batch, h, w, c, n, size, stride, padding, activation, batch_normalize, binary, xnor, params.net.adam, quantized, use_bin_output);
+
+    convolutional_layer layer = make_convolutional_layer(batch, h, w, c, n, size,
+        stride, padding, activation, batch_normalize, binary, xnor, params.net.adam, quantized, use_bin_output);
+
     layer.flipped = option_find_int_quiet(options, "flipped", 0);
     layer.dot = option_find_float_quiet(options, "dot", 0);
     if (params.net.adam) {
@@ -3883,8 +3893,12 @@ void parse_net_options(list *options, network *net)
 network parse_network_cfg(char *filename, int batch, int quantized)
 {
     list *sections = read_cfg(filename);
+
+    // read the first node: net
     node *n = sections->front;
     if (!n) error("Config file has no sections");
+
+    // create network, layer count is sections->size - 1
     network net = make_network(sections->size - 1);
     net.quantized = quantized;
     net.do_input_calibration = 0;
@@ -3912,17 +3926,27 @@ network parse_network_cfg(char *filename, int batch, int quantized)
     int count = 0;
     free_section(s);
     fprintf(stderr, "layer     filters    size              input                output\n");
+
+    // read convolutional, maxpool
     while (n) {
         params.index = count;
         fprintf(stderr, "%5d ", count);
         s = (section *)n->val;
         options = s->options;
+
+        // parse data into this layer and save to net
         layer l = { 0 };
         LAYER_TYPE lt = string_to_layer_type(s->type);
-        if (lt == CONVOLUTIONAL) {
+
+        // [convolutional]
+        if (lt == CONVOLUTIONAL)
+        {
             // if(count == 80) params.quantized = 0;    // doesn't lost GPU - mAP = 45.61%
+            // try to find layer: [yolo]
             node *tmp = n->next;
-            if(tmp) tmp = tmp->next;
+            if(tmp)
+                tmp = tmp->next;
+
             if (tmp)
             {
                 if (string_to_layer_type(((section *)tmp->val)->type) == YOLO) {
@@ -3964,18 +3988,25 @@ network parse_network_cfg(char *filename, int batch, int quantized)
         l.dontload = option_find_int_quiet(options, "dontload", 0);
         l.dontloadscales = option_find_int_quiet(options, "dontloadscales", 0);
         option_unused(options);
+
+        // save this layer
         net.layers[count] = l;
-        if (l.workspace_size > workspace_size) workspace_size = l.workspace_size;
+        if (l.workspace_size > workspace_size)
+            workspace_size = l.workspace_size;
+
         free_section(s);
         n = n->next;
         ++count;
-        if (n) {
+        if (n)
+        {
             params.h = l.out_h;
             params.w = l.out_w;
             params.c = l.out_c;
             params.inputs = l.outputs;
         }
     }
+
+
     free_list(sections);
     net.outputs = get_network_output_size(net);
     net.output = get_network_output(net);

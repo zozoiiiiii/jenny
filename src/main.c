@@ -160,11 +160,11 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
     //image **alphabet = load_alphabet();            // image.c
     image **alphabet = NULL;
 
-    // 1. 网络配置，神经网络结构
+    // 1. 网络配置，神经网络结构, convolution layer即卷积层
     network net = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
     if (weightfile)
     {
-        // 2. 权重
+        // 2. 权重, cutoff == net.n, means do not cut off any layer
         load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
     }
 

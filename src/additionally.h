@@ -735,7 +735,7 @@ extern "C" {
     typedef struct network {
         int quantized;
         float *workspace;
-        int n;
+        int n;  // layer count
         int batch;
         float *input_calibration;
         int input_calibration_size;
