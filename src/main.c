@@ -42,17 +42,21 @@ detection_with_class* get_actual_detections(detection *dets, int dets_num, float
     int selected_num = 0;
     detection_with_class* result_arr = calloc(dets_num, sizeof(detection_with_class));
     int i;
-    for (i = 0; i < dets_num; ++i) {
+    for (i = 0; i < dets_num; ++i)
+    {
         int best_class = -1;
         float best_class_prob = thresh;
         int j;
-        for (j = 0; j < dets[i].classes; ++j) {
+        for (j = 0; j < dets[i].classes; ++j)
+        {
             if (dets[i].prob[j] > best_class_prob) {
                 best_class = j;
                 best_class_prob = dets[i].prob[j];
             }
         }
-        if (best_class >= 0) {
+
+        if (best_class >= 0)
+        {
             result_arr[selected_num].det = dets[i];
             result_arr[selected_num].best_class = best_class;
             ++selected_num;
@@ -87,7 +91,8 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
     // text output
     qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_lefts);
     int i;
-    for (i = 0; i < selected_detections_num; ++i) {
+    for (i = 0; i < selected_detections_num; ++i)
+    {
         const int best_class = selected_detections[i].best_class;
         printf("%s: %.0f%%", names[best_class], selected_detections[i].det.prob[best_class] * 100);
         if (ext_output)
@@ -160,11 +165,11 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
     //image **alphabet = load_alphabet();            // image.c
     image **alphabet = NULL;
 
-    // 1. 网络配置，神经网络结构, convolution layer即卷积层
+    // 1. read config file, like convolution layer
     network net = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
     if (weightfile)
     {
-        // 2. 权重, cutoff == net.n, means do not cut off any layer
+        // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
         load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
     }
 
@@ -206,10 +211,12 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
         image sized = resize_image(im, net.w, net.h);    // image.c
         layer l = net.layers[net.n - 1];
 
-        box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
-        float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
-        for (j = 0; j < l.w*l.h*l.n; ++j)
-            probs[j] = calloc(l.classes, sizeof(float *));
+        // updated by junliang, begin, not in use.
+        //box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
+        //float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
+        //for (j = 0; j < l.w*l.h*l.n; ++j)
+            //probs[j] = calloc(l.classes, sizeof(float *));
+        // updated by junliang, end.
 
         float *X = sized.data;
         time = clock();
@@ -234,6 +241,7 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
         }
         else
         {
+            // real predict
             network_predict_cpu(net, X);
         }
 #endif
@@ -260,8 +268,8 @@ void test_detector_cpu(char **names, char *cfgfile, char *weightfile, char *file
 
         free_image(im);                    // image.c
         free_image(sized);                // image.c
-        free(boxes);
-        free_ptrs((void **)probs, l.w*l.h*l.n);    // utils.c
+        //free(boxes);
+        //free_ptrs((void **)probs, l.w*l.h*l.n);    // utils.c
 #ifdef OPENCV
         cvWaitKey(0);
         cvDestroyAllWindows();

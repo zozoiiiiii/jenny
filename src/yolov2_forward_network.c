@@ -109,8 +109,14 @@ void forward_convolutional_layer_cpu(layer l, network_state state)
     float *b = state.workspace;
     float *c = l.output;
 
+    /* 
+    1. im2col: use im2col to change the input into a new array, used for filter (https://blog.csdn.net/mrhiuser/article/details/52672824)
+    2. gemm: im2col result * matrix from weight = output
+    */
+
     // convolution as GEMM (as part of BLAS)
-    for (i = 0; i < l.batch; ++i) {
+    for (i = 0; i < l.batch; ++i)
+    {
         //im2col_cpu(state.input, l.c, l.h, l.w, l.size, l.stride, l.pad, b);    // im2col.c
         //im2col_cpu_custom(state.input, l.c, l.h, l.w, l.size, l.stride, l.pad, b);    // AVX2
 
@@ -642,6 +648,8 @@ float *network_predict_cpu(network net, float *input)
     state.delta = 0;
     yolov2_forward_network_cpu(net, state);    // network on CPU
                                             //float *out = get_network_output(net);
+
+    // updated by junliang, begin, do not care about return 
     int i;
     for (i = net.n - 1; i > 0; --i) if (net.layers[i].type != COST) break;
     return net.layers[i].output;

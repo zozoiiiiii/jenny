@@ -70,10 +70,12 @@ void yolov2_fuse_conv_batchnorm(network net)
     for (j = 0; j < net.n; ++j) {
         layer *l = &net.layers[j];
 
-        if (l->type == CONVOLUTIONAL) {
+        if (l->type == CONVOLUTIONAL)
+        {
             printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
 
-            if (l->batch_normalize) {
+            if (l->batch_normalize)
+            {
                 int f;
                 for (f = 0; f < l->n; ++f)
                 {
@@ -287,13 +289,16 @@ void binary_align_weights(convolutional_layer *l)
 void calculate_binary_weights(network net)
 {
     int j;
-    for (j = 0; j < net.n; ++j) {
+    for (j = 0; j < net.n; ++j)
+    {
         layer *l = &net.layers[j];
 
-        if (l->type == CONVOLUTIONAL) {
+        if (l->type == CONVOLUTIONAL)
+        {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
 
-            if (l->xnor) {
+            if (l->xnor)
+            {
                 //printf("\n %d \n", j);
                 l->lda_align = 256; // 256bit for AVX2
 
@@ -3483,7 +3488,9 @@ convolutional_layer parse_convolutional(list *options, size_params params)
     w = params.w;
     c = params.c;
     batch = params.batch;
-    if (!(h && w && c)) error("Layer before convolutional layer must output image.");
+    if (!(h && w && c))
+        error("Layer before convolutional layer must output image.");
+
     int batch_normalize = option_find_int_quiet(options, "batch_normalize", 0);
     int binary = option_find_int_quiet(options, "binary", 0);
     int xnor = option_find_int_quiet(options, "xnor", 0);
@@ -4339,13 +4346,17 @@ void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, f
 void fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter)
 {
     int j;
-    for (j = 0; j < net->n; ++j) {
+    for (j = 0; j < net->n; ++j)
+    {
         layer l = net->layers[j];
-        if (l.type == YOLO) {
+        if (l.type == YOLO)
+        {
             int count = get_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
             dets += count;
         }
-        if (l.type == REGION) {
+
+        if (l.type == REGION)
+        {
             custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
             //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
             dets += l.w*l.h*l.n;
