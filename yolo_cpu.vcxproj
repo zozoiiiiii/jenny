@@ -149,8 +149,11 @@
     <ClCompile Include="src\additionally.c" />
     <ClCompile Include="src\box.c" />
     <ClCompile Include="src\detector.cpp" />
-    <ClCompile Include="src\layer.cpp" />
+    <ClCompile Include="src\layers\convolutional_layer.cpp" />
+    <ClCompile Include="src\layers\layer.cpp" />
+    <ClCompile Include="src\layers\network.cpp" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\parser\ini_parser.cpp" />
     <ClCompile Include="src\yolov2_forward_network.c" />
     <ClCompile Include="src\yolov2_forward_network_quantized.c" />
   </ItemGroup>
@@ -158,7 +161,10 @@
     <ClInclude Include="src\additionally.h" />
     <ClInclude Include="src\box.h" />
     <ClInclude Include="src\detector.h" />
-    <ClInclude Include="src\layer.h" />
+    <ClInclude Include="src\layers\convolutional_layer.h" />
+    <ClInclude Include="src\layers\layer.h" />
+    <ClInclude Include="src\layers\network.h" />
+    <ClInclude Include="src\parser\ini_parser.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\stb_image_write.h" />
   </ItemGroup>

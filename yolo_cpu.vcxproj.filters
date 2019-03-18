@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\additionally.c" />
+    <ClCompile Include="src\box.c" />
+    <ClCompile Include="src\detector.cpp" />
+    <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\yolov2_forward_network.c" />
+    <ClCompile Include="src\yolov2_forward_network_quantized.c" />
+    <ClCompile Include="src\parser\ini_parser.cpp">
+      <Filter>parser</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\convolutional_layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\network.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\additionally.h" />
+    <ClInclude Include="src\box.h" />
+    <ClInclude Include="src\detector.h" />
+    <ClInclude Include="src\stb_image.h" />
+    <ClInclude Include="src\stb_image_write.h" />
+    <ClInclude Include="src\parser\ini_parser.h">
+      <Filter>parser</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\convolutional_layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\network.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="parser">
+      <UniqueIdentifier>{a90d9b87-e5bd-418f-8af0-1aa8f435ac37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="layers">
+      <UniqueIdentifier>{991a5eaa-569c-458a-950a-a6a27efe4e96}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

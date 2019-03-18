@@ -2749,86 +2749,6 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
         l.v = calloc(c*n*size*size, sizeof(float));
     }
 
-#ifdef GPU
-    // commented only for this custom version of Yolo v2
-    //l.forward_gpu = forward_convolutional_layer_gpu;
-    //l.backward_gpu = backward_convolutional_layer_gpu;
-    //l.update_gpu = update_convolutional_layer_gpu;
-
-    if (gpu_index >= 0) {
-        //if (adam) {
-        //    l.m_gpu = cuda_make_array(l.m, c*n*size*size);
-        //    l.v_gpu = cuda_make_array(l.v, c*n*size*size);
-        //}
-
-        l.weights_gpu = cuda_make_array(l.weights, c*n*size*size);
-        //l.weight_updates_gpu = cuda_make_array(l.weight_updates, c*n*size*size);
-
-        l.biases_gpu = cuda_make_array(l.biases, n);
-        //l.bias_updates_gpu = cuda_make_array(l.bias_updates, n);
-
-        //l.delta_gpu = cuda_make_array(l.delta, l.batch*out_h*out_w*n);
-        l.output_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-
-        cudaError_t status;
-        status = cudaMalloc((void **)&(l.output_gpu_int8), sizeof(int8_t)*l.batch*out_h*out_w*n);
-
-        //if (binary) {
-        //    l.binary_weights_gpu = cuda_make_array(l.weights, c*n*size*size);
-        //}
-        if (xnor) {
-            l.binary_weights_gpu = cuda_make_array(l.weights, c*n*size*size);
-            l.mean_arr_gpu = cuda_make_array(0, l.n);
-            l.binary_input_gpu = cuda_make_array(0, l.inputs*l.batch);
-        }
-
-        if (batch_normalize) {
-            //l.mean_gpu = cuda_make_array(l.mean, n);
-            //l.variance_gpu = cuda_make_array(l.variance, n);
-
-            l.rolling_mean_gpu = cuda_make_array(l.mean, n);
-            l.rolling_variance_gpu = cuda_make_array(l.variance, n);
-
-            //l.mean_delta_gpu = cuda_make_array(l.mean, n);
-            //l.variance_delta_gpu = cuda_make_array(l.variance, n);
-
-            l.scales_gpu = cuda_make_array(l.scales, n);
-            //l.scale_updates_gpu = cuda_make_array(l.scale_updates, n);
-
-            l.x_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-            //l.x_norm_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-        }
-#ifdef CUDNN
-        cudnnCreateTensorDescriptor(&l.biasTensorDesc);
-        cudnnCreateActivationDescriptor(&l.activationDesc);
-        cudnnCreateTensorDescriptor(&l.srcTensorDesc);
-        cudnnCreateTensorDescriptor(&l.dstTensorDesc);
-        cudnnCreateFilterDescriptor(&l.weightDesc);
-        //cudnnCreateTensorDescriptor(&l.dsrcTensorDesc);
-        //cudnnCreateTensorDescriptor(&l.ddstTensorDesc);
-        //cudnnCreateFilterDescriptor(&l.dweightDesc);
-        cudnnCreateConvolutionDescriptor(&l.convDesc);
-        cudnn_convolutional_setup(&l);
-#endif
-    }
-#endif
-
-#ifdef OPENCL
-    //if (gpu_index >= 0) {
-
-    l.weights_ocl = ocl_make_array(l.weights, c*n*size*size);
-    l.biases_ocl = ocl_make_array(l.biases, n);
-    l.output_ocl = ocl_make_array(l.output, l.batch*out_h*out_w*n);
-
-    if (batch_normalize) {
-        l.rolling_mean_ocl = ocl_make_array(l.rolling_mean, n);    // l.mean
-        l.rolling_variance_ocl = ocl_make_array(l.rolling_variance, n);    // l.variance
-        l.scales_ocl = ocl_make_array(l.scales, n);
-
-        l.x_ocl = ocl_make_array(l.output, l.batch*out_h*out_w*n);
-    }
-    //}
-#endif
 
     l.workspace_size = get_workspace_size(l);
     l.activation = activation;
@@ -3770,12 +3690,16 @@ LAYER_TYPE string_to_layer_type(char * type)
 {
     if (strcmp(type, "[yolo]") == 0) return YOLO;
     if (strcmp(type, "[region]") == 0) return REGION;
+
     if (strcmp(type, "[conv]") == 0
         || strcmp(type, "[convolutional]") == 0) return CONVOLUTIONAL;
+
     if (strcmp(type, "[net]") == 0
         || strcmp(type, "[network]") == 0) return NETWORK;
+
     if (strcmp(type, "[max]") == 0
         || strcmp(type, "[maxpool]") == 0) return MAXPOOL;
+
     if (strcmp(type, "[reorg]") == 0) return REORG;
     if (strcmp(type, "[upsample]") == 0) return UPSAMPLE;
     if (strcmp(type, "[shortcut]") == 0) return SHORTCUT;
@@ -4017,28 +3941,10 @@ network parse_network_cfg(char *filename, int batch, int quantized)
     free_list(sections);
     net.outputs = get_network_output_size(net);
     net.output = get_network_output(net);
-    if (workspace_size) {
+    if (workspace_size)
+    {
         //printf("%ld\n", workspace_size);
-#ifdef GPU
-        if (gpu_index >= 0) {
-            net.workspace = cuda_make_array(0, (workspace_size - 1) / sizeof(float) + 1);
-            int size = net.layers[0].inputs * net.batch;    //get_network_input_size(net) * net.batch;
-            net.input_state_gpu = cuda_make_array(0, size);
-        }
-        else {
-            net.workspace = calloc(1, workspace_size);
-        }
-#else    // GPU
         net.workspace = calloc(1, workspace_size);
-#endif    // GPU
-
-#ifdef OPENCL
-        //if (gpu_index >= 0) {
-        net.workspace_ocl = ocl_make_array(0, workspace_size / sizeof(float));
-        //net.workspace_ocl = ocl_make_array(0, (workspace_size - 1) / sizeof(float) + 1);
-        //net.workspace_ocl = ocl_make_array(NULL, 1024*1024*1024);
-        //}
-#endif    // OPENCL
     }
     return net;
 }

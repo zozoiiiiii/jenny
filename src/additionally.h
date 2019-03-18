@@ -634,85 +634,6 @@ extern "C" {
         float *binary_input;
 
         size_t workspace_size;
-
-#ifdef GPU
-        float *z_gpu;
-        float *r_gpu;
-        float *h_gpu;
-
-        int *indexes_gpu;
-        float * prev_state_gpu;
-        float * forgot_state_gpu;
-        float * forgot_delta_gpu;
-        float * state_gpu;
-        float * state_delta_gpu;
-        float * gate_gpu;
-        float * gate_delta_gpu;
-        float * save_gpu;
-        float * save_delta_gpu;
-        float * concat_gpu;
-        float * concat_delta_gpu;
-
-        float *binary_input_gpu;
-        float *binary_weights_gpu;
-
-        float * mean_gpu;
-        float * variance_gpu;
-
-        float * rolling_mean_gpu;
-        float * rolling_variance_gpu;
-
-        float * variance_delta_gpu;
-        float * mean_delta_gpu;
-
-        float * col_image_gpu;
-
-        float * x_gpu;
-        float * x_norm_gpu;
-        float * weights_gpu;
-        //float * weight_updates_gpu;
-        int8_t * weights_int8_gpu;
-        int8_t * weights_int8_int8x4_gpu;
-
-        float * biases_gpu;
-        //float * bias_updates_gpu;
-        float * biases_quant_gpu;
-
-        float * scales_gpu;
-        //float * scale_updates_gpu;
-
-        float * output_gpu;
-        int8_t *output_gpu_int8;
-        float * delta_gpu;
-        float * rand_gpu;
-        float * squared_gpu;
-        float * norms_gpu;
-#ifdef CUDNN
-        cudnnTensorDescriptor_t biasTensorDesc;
-        cudnnActivationDescriptor_t activationDesc;
-        cudnnTensorDescriptor_t srcTensorDesc, dstTensorDesc;
-        //cudnnTensorDescriptor_t dsrcTensorDesc, ddstTensorDesc;
-        cudnnFilterDescriptor_t weightDesc;
-        //cudnnFilterDescriptor_t dweightDesc;
-        cudnnConvolutionDescriptor_t convDesc;
-        cudnnConvolutionFwdAlgo_t fw_algo;
-        //cudnnConvolutionBwdDataAlgo_t bd_algo;
-        //cudnnConvolutionBwdFilterAlgo_t bf_algo;
-        cudnnPoolingDescriptor_t poolingDesc;
-#endif
-#endif
-
-#ifdef OPENCL
-        cl_mem weights_ocl;
-        cl_mem biases_ocl;
-        cl_mem scales_ocl;
-        cl_mem rolling_mean_ocl;
-        cl_mem rolling_variance_ocl;
-
-        cl_mem output_ocl;
-        cl_mem indexes_ocl;
-        cl_mem x_ocl;
-#endif
     };
 
     typedef layer local_layer;
@@ -779,17 +700,6 @@ extern "C" {
         int gpu_index;
         tree *hierarchy;
         int do_input_calibration;
-
-#ifdef GPU
-        float *input_state_gpu;
-
-        float **input_gpu;
-        float **truth_gpu;
-#endif
-
-#ifdef OPENCL
-        cl_mem workspace_ocl;
-#endif
     } network;
 
     typedef struct network_state {
@@ -812,17 +722,6 @@ extern "C" {
     network make_network(int n);
 
 
-    // network.c
-#ifdef GPU
-#ifdef CUDNN
-    void cudnn_convolutional_setup(layer *l);
-    void cuda_set_device(int n);
-#endif
-#endif
-
-#ifdef OPENCL
-    bool ocl_initialize();
-#endif
 
     // network.c
     void set_batch_network(network *net, int b);
