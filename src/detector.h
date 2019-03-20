@@ -10,39 +10,62 @@
 #include <string>
 #include "layers/convolutional_layer.h"
 #include "parser/ini_parser.h"
+#include "layers/string_util.h"
+#include "box.h"
 
+#include "image.h"
 
 NS_JJ_BEGIN
+
+struct detection_with_class
+{
+    detection det;
+    // The most probable class id: the best class index in this->prob.
+    // Is filled temporary when processing results, otherwise not initialized
+    int best_class;
+};
+
 class Detector
 {
 public:
-    void loadData(const char* cfgfile, const char* weightsfile);
-    void detectImage(char **names, char *filename, float thresh, int quantized, int dont_show);
+    static Detector* instance();
+    void detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show);
 
 private:
-
+    void loadData(const char* cfgfile, const char* weightsfile);
     JJ::network* readConfigFile(const char* cfgFile, int batch, int quantized);
     bool parseNetOptions(const IniParser* pIniParser, JJ::network* pNetWork);
-    void splitString(std::vector<std::string>& result, const std::string& str, const std::string& delims);
-    void splitInt(std::vector<int>& result, const std::string& str, const std::string& delims);
-    void splitFloat(std::vector<float>& result, const std::string& str, const std::string& delims);
-    std::string Trim(const std::string& str, const char ch);
+    
 
     JJ::learning_rate_policy get_policy(const char *s);
     JJ::LAYER_TYPE string_to_layer_type(const std::string& type);
 
 
-    //convolutional_layer parse_convolutional(const IniParser* pParser, int section, size_params params);
-    //layer parse_region(list *options, size_params params);
-    //int *parse_yolo_mask(char *a, int *num);
-    //layer parse_yolo(list *options, size_params params);
-    //softmax_layer parse_softmax(list *options, size_params params);
-    //maxpool_layer parse_maxpool(list *options, size_params params);
-    //layer parse_reorg(list *options, size_params params);
-    //layer parse_upsample(list *options, size_params params, network net);
-    //layer parse_shortcut(list *options, size_params params, network net);
-    //route_layer parse_route(list *options, size_params params, network net);
 
+    detection_with_class* get_actual_detections(detection *dets, int dets_num, float thresh, int* selected_detections_num);
+
+    // get prediction boxes: yolov2_forward_network.c
+    void get_region_boxes_cpu(layer l, int w, int h, float thresh, float **probs, box *boxes, int only_objectness, int *map);
+
+    void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
+
+
+
+    void yolov2_fuse_conv_batchnorm(network net);
+
+    void calculate_binary_weights(network net);
+
+
+
+    void yolov2_forward_network_cpu(network net, network_state state);
+    float* network_predict_cpu(network net, float *input);
+
+
+    void fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter);
+    detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter);
+
+
+    void binary_align_weights(layer *l);
 private:
     JJ::network* m_pNet;
 };

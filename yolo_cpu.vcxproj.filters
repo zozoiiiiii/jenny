@@ -19,6 +19,22 @@
     <ClCompile Include="src\layers\network.cpp">
       <Filter>layers</Filter>
     </ClCompile>
+    <ClCompile Include="src\layers\route_layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\upsample_layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\yolo_layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\string_util.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\layers\maxpool_layer.cpp">
+      <Filter>layers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\image.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\additionally.h" />
@@ -38,6 +54,22 @@
     <ClInclude Include="src\layers\network.h">
       <Filter>layers</Filter>
     </ClInclude>
+    <ClInclude Include="src\layers\route_layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\upsample_layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\yolo_layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\string_util.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\layers\maxpool_layer.h">
+      <Filter>layers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\image.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="parser">

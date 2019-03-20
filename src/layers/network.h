@@ -39,6 +39,8 @@ struct network
     float decay;
     //layer *layers;
     std::vector<layer> layers;
+    std::vector<ILayer*> jjLayers;
+
     int outputs;
     std::vector<float> output;
     learning_rate_policy policy;
@@ -76,17 +78,6 @@ struct network
 };
 
 
-struct network_state
-{
-    float *truth;
-    float *input;
-    int8_t *input_int8;
-    float *delta;
-    float *workspace;
-    int train;
-    int index;
-    network net;
-};
 
 class NetWork
 {

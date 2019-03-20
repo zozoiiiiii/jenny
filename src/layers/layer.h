@@ -11,6 +11,7 @@
 #include <vector>
 #include <map>
 #include "../parser/ini_parser.h"
+#include "string_util.h"
 
 // namespace
 #ifndef NS_JJ_BEGIN
@@ -132,7 +133,7 @@ struct layer
     int reorg;
     int log;
 
-    int *mask;
+    std::vector<int> mask;  // yolo layer
     int total;
     float bflops;
 
@@ -172,9 +173,9 @@ struct layer
     float probability;
     float scale;
 
-    int *indexes;
+    std::vector<int> indexes; // maxpoll layer
     float *rand;
-    float *cost;
+    std::vector<float> cost;    // yolo layer
     std::vector<char> cweights;
     float *state;
     float *prev_state;
@@ -200,7 +201,7 @@ struct layer
     int new_lda;
     int bit_align;
 
-    std::vector<float> biases;
+    std::vector<float> biases;      // con, yolo layer
     std::vector<float> biases_quant;
     //float *bias_updates;
 
@@ -221,15 +222,15 @@ struct layer
     float input_quant_multipler;
 
     float *col_image;
-    int   * input_layers;
-    int   * input_sizes;
+    std::vector<int> input_layers; // route
+    std::vector<int> input_sizes; // route 
     //float * delta;
     //float * output;
-    std::vector<float> output;
+    std::vector<float> output;  // con, yolo, maxpool, route, upsample
     //float *output_multipler;
     float output_multipler;
     //int8_t * output_int8;
-    std::vector<int8_t> output_int8;
+    std::vector<int8_t> output_int8;    //con, maxpool , route
     float * squared;
     float * norms;
 
@@ -295,10 +296,27 @@ struct size_params
     JJ::network* net;
 };
 
+
+struct network_state
+{
+    float *truth;
+    float *input;
+    int8_t *input_int8;
+    float *delta;
+    float *workspace;
+    int train;
+    int index;
+    JJ::network* net;
+};
+
 class ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
+    void forward_layer_cpu(layer l, network_state state) {}
+
+
+
 
     layer m_layerInfo;
 };

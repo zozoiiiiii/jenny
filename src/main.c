@@ -5,6 +5,7 @@
 #include "pthread.h"
 
 #include "additionally.h"
+//#include "detector.h"
 
 #ifdef OPENCV
 #include "opencv2/highgui/highgui_c.h"

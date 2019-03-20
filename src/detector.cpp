@@ -1,9 +1,338 @@
 #include "detector.h"
 #include "parser/ini_parser.h"
 #include "layers/convolutional_layer.h"
+#include "layers/yolo_layer.h"
+#include "layers/maxpool_layer.h"
+#include "layers/route_layer.h"
+#include "layers/upsample_layer.h"
+#include "image.h"
 
+#include <time.h>
 
 NS_JJ_BEGIN
+
+
+
+
+
+
+// global GPU index: cuda.c
+int gpu_index = 0;
+
+// Creates array of detections with prob > thresh and fills best_class for them
+detection_with_class* Detector::get_actual_detections(detection *dets, int dets_num, float thresh, int* selected_detections_num)
+{
+    int selected_num = 0;
+    detection_with_class* result_arr = (detection_with_class*)calloc(dets_num, sizeof(detection_with_class));
+    int i;
+    for (i = 0; i < dets_num; ++i)
+    {
+        int best_class = -1;
+        float best_class_prob = thresh;
+        int j;
+        for (j = 0; j < dets[i].classes; ++j)
+        {
+            if (dets[i].prob[j] > best_class_prob) {
+                best_class = j;
+                best_class_prob = dets[i].prob[j];
+            }
+        }
+
+        if (best_class >= 0)
+        {
+            result_arr[selected_num].det = dets[i];
+            result_arr[selected_num].best_class = best_class;
+            ++selected_num;
+        }
+    }
+    if (selected_detections_num)
+        *selected_detections_num = selected_num;
+    return result_arr;
+}
+
+// compare to sort detection** by bbox.x
+int compare_by_lefts(const void *a_ptr, const void *b_ptr)
+{
+    const detection_with_class* a = (detection_with_class*)a_ptr;
+    const detection_with_class* b = (detection_with_class*)b_ptr;
+    const float delta = (a->det.bbox.x - a->det.bbox.w / 2) - (b->det.bbox.x - b->det.bbox.w / 2);
+    return delta < 0 ? -1 : delta > 0 ? 1 : 0;
+}
+
+// compare to sort detection** by best_class probability
+int compare_by_probs(const void *a_ptr, const void *b_ptr)
+{
+    const detection_with_class* a = (detection_with_class*)a_ptr;
+    const detection_with_class* b = (detection_with_class*)b_ptr;
+    float delta = a->det.prob[a->best_class] - b->det.prob[b->best_class];
+    return delta < 0 ? -1 : delta > 0 ? 1 : 0;
+}
+
+void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output)
+{
+    int selected_detections_num;
+    detection_with_class* selected_detections = get_actual_detections(dets, num, thresh, &selected_detections_num);
+
+    // text output
+    qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_lefts);
+    int i;
+    for (i = 0; i < selected_detections_num; ++i)
+    {
+        const int best_class = selected_detections[i].best_class;
+        printf("%s: %.0f%%", names[best_class], selected_detections[i].det.prob[best_class] * 100);
+        if (ext_output)
+            printf("\t(left_x: %4.0f   top_y: %4.0f   width: %4.0f   height: %4.0f)\n",
+                round((selected_detections[i].det.bbox.x - selected_detections[i].det.bbox.w / 2)*im.w),
+                round((selected_detections[i].det.bbox.y - selected_detections[i].det.bbox.h / 2)*im.h),
+                round(selected_detections[i].det.bbox.w*im.w), round(selected_detections[i].det.bbox.h*im.h));
+        else
+            printf("\n");
+        int j;
+        for (j = 0; j < classes; ++j) {
+            if (selected_detections[i].det.prob[j] > thresh && j != best_class) {
+                printf("%s: %.0f%%\n", names[j], selected_detections[i].det.prob[j] * 100);
+            }
+        }
+    }
+
+    // ImageInfo output
+    qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_probs);
+    for (i = 0; i < selected_detections_num; ++i) {
+        int width = im.h * .006;
+        if (width < 1)
+            width = 1;
+
+        /*
+        if(0){
+        width = pow(prob, 1./2.)*10+1;
+        alphabet = 0;
+        }
+        */
+
+        //printf("%d %s: %.0f%%\n", i, names[selected_detections[i].best_class], prob*100);
+        int offset = selected_detections[i].best_class * 123457 % classes;
+        float red = ImageUtil::get_color(2, offset, classes);
+        float green = ImageUtil::get_color(1, offset, classes);
+        float blue = ImageUtil::get_color(0, offset, classes);
+        float rgb[3];
+
+        //width = prob*20+2;
+
+        rgb[0] = red;
+        rgb[1] = green;
+        rgb[2] = blue;
+        box b = selected_detections[i].det.bbox;
+        //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
+
+        int left = (b.x - b.w / 2.)*im.w;
+        int right = (b.x + b.w / 2.)*im.w;
+        int top = (b.y - b.h / 2.)*im.h;
+        int bot = (b.y + b.h / 2.)*im.h;
+
+        if (left < 0) left = 0;
+        if (right > im.w - 1) right = im.w - 1;
+        if (top < 0) top = 0;
+        if (bot > im.h - 1) bot = im.h - 1;
+
+        ImageUtil::draw_box_width(im, left, top, right, bot, width, red, green, blue);
+    }
+    free(selected_detections);
+}
+
+
+// fuse convolutional and batch_norm weights into one convolutional-layer
+void Detector::yolov2_fuse_conv_batchnorm(network net)
+{
+    int j;
+    for (j = 0; j < net.n; ++j) {
+        layer *l = &net.layers[j];
+
+        if (l->type == CONVOLUTIONAL)
+        {
+            printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
+
+            if (l->batch_normalize)
+            {
+                int f;
+                for (f = 0; f < l->n; ++f)
+                {
+                    l->biases[f] = l->biases[f] - l->scales[f] * l->rolling_mean[f] / (sqrtf(l->rolling_variance[f]) + .000001f);
+
+                    const size_t filter_size = l->size*l->size*l->c;
+                    int i;
+                    for (i = 0; i < filter_size; ++i) {
+                        int w_index = f * filter_size + i;
+
+                        l->weights[w_index] = l->weights[w_index] * l->scales[f] / (sqrtf(l->rolling_variance[f]) + .000001f);
+                    }
+                }
+
+                l->batch_normalize = 0;
+            }
+        }
+        else {
+            printf(" Skip layer: %d \n", l->type);
+        }
+    }
+}
+
+void Detector::calculate_binary_weights(network net)
+{
+    int j;
+    for (j = 0; j < net.n; ++j)
+    {
+        layer *l = &net.layers[j];
+
+        if (l->type == CONVOLUTIONAL)
+        {
+            //printf(" Merges Convolutional-%d and batch_norm \n", j);
+
+            if (l->xnor)
+            {
+                //printf("\n %d \n", j);
+                l->lda_align = 256; // 256bit for AVX2
+
+                binary_align_weights(l);
+
+                if (net.layers[j].use_bin_output) {
+                    l->activation = LINEAR;
+                }
+            }
+        }
+    }
+    //printf("\n calculate_binary_weights Done! \n");
+
+}
+
+void binarize_weights(std::vector<float> weights, int n, int size, std::vector<float>& binary)
+{
+    int i, f;
+    for (f = 0; f < n; ++f) {
+        float mean = 0;
+        for (i = 0; i < size; ++i) {
+            mean += fabs(weights[f*size + i]);
+        }
+        mean = mean / size;
+        for (i = 0; i < size; ++i) {
+            binary[f*size + i] = (weights[f*size + i] > 0) ? mean : -mean;
+        }
+    }
+}
+
+
+void float_to_bit(std::vector<float> src, std::vector<unsigned char>& dst, size_t size)
+{
+    size_t dst_size = size / 8 + 1;
+    //memset(dst, 0, dst_size);
+
+    size_t i;
+    char *byte_arr = (char*)calloc(size, sizeof(char));
+    for (i = 0; i < size; ++i) {
+        if (src[i] > 0) byte_arr[i] = 1;
+    }
+
+    //for (i = 0; i < size; ++i) {
+    //    dst[i / 8] |= byte_arr[i] << (i % 8);
+    //}
+
+    for (i = 0; i < size; i += 8) {
+        char dst_tmp = 0;
+        dst_tmp |= byte_arr[i + 0] << 0;
+        dst_tmp |= byte_arr[i + 1] << 1;
+        dst_tmp |= byte_arr[i + 2] << 2;
+        dst_tmp |= byte_arr[i + 3] << 3;
+        dst_tmp |= byte_arr[i + 4] << 4;
+        dst_tmp |= byte_arr[i + 5] << 5;
+        dst_tmp |= byte_arr[i + 6] << 6;
+        dst_tmp |= byte_arr[i + 7] << 7;
+        dst[i / 8] = dst_tmp;
+    }
+    free(byte_arr);
+}
+
+void get_mean_array(float *src, size_t size, size_t filters, float *mean_arr) {
+    size_t i, counter;
+    counter = 0;
+    for (i = 0; i < size; i += size / filters) {
+        mean_arr[counter++] = fabs(src[i]);
+    }
+}
+
+void Detector::binary_align_weights(layer *l)
+{
+    int m = l->n;
+    int k = l->size*l->size*l->c;
+    size_t new_lda = k + (l->lda_align - k % l->lda_align); // (k / 8 + 1) * 8;
+    l->new_lda = new_lda;
+
+    binarize_weights(l->weights, m, k, l->binary_weights);
+
+    size_t align_weights_size = new_lda * m;
+    l->align_bit_weights_size = align_weights_size / 8 + 1;
+    float *align_weights = (float*)calloc(align_weights_size, sizeof(float));
+    l->align_bit_weights = (char*)calloc(l->align_bit_weights_size, sizeof(char));
+
+    size_t i, j;
+    // align A without transpose
+    for (i = 0; i < m; ++i) {
+        for (j = 0; j < k; ++j) {
+            align_weights[i*new_lda + j] = l->binary_weights[i*k + j];
+        }
+    }
+
+
+    //if (l->c % 32 == 0)
+    if (gpu_index < 0 && l->stride == 1 && l->pad == 1 && l->c % 32 == 0)
+    {
+        int fil, chan;
+        const int items_per_filter = l->c * l->size * l->size;
+        //const int dst_items_per_filter = new_lda;
+        for (fil = 0; fil < l->n; ++fil)
+        {
+            for (chan = 0; chan < l->c; chan += 32)
+            {
+                const int items_per_channel = l->size*l->size;
+                for (i = 0; i < items_per_channel; ++i)
+                {
+                    uint32_t val = 0;
+                    int c_pack;
+                    for (c_pack = 0; c_pack < 32; ++c_pack) {
+                        float src = l->binary_weights[fil*items_per_filter + (chan + c_pack)*items_per_channel + i];
+
+                        //align_weights[fil*items_per_filter + chan*items_per_channel + i * 32 + c_pack] = src;
+
+                        align_weights[fil*new_lda + chan * items_per_channel + i * 32 + c_pack] = src;
+                        //val |= (src << c);
+                    }
+
+                }
+            }
+        }
+
+        //printf("\n l.index = %d \t aw[0] = %f, aw[1] = %f, aw[2] = %f, aw[3] = %f \n", l->index, align_weights[0], align_weights[1], align_weights[2], align_weights[3]);
+        //memcpy(l->binary_weights, align_weights, (l->size * l->size * l->c * l->n) * sizeof(float));
+
+        //float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
+
+        //get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
+        //get_mean_array(l->binary_weights, m*new_lda, l->n, l->mean_arr);
+    }
+    else {
+        //float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
+
+        //get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
+    }
+    //l->mean_arr = calloc(l->n, sizeof(float));
+
+    //get_mean_array(align_weights, align_weights_size, l->n, l->mean_arr);
+
+
+    free(align_weights);
+}
+
+
+
+
 void Detector::loadData(const char* cfgfile, const char* weightfile)
 {
     JJ::network* net = readConfigFile(cfgfile, 1, 0);
@@ -14,9 +343,113 @@ void Detector::loadData(const char* cfgfile, const char* weightfile)
     }
 }
 
-void Detector::detectImage(char **names, char *filename, float thresh, int quantized, int dont_show)
-{
 
+Detector* Detector::instance()
+{
+    static Detector s_detector;
+    return &s_detector;
+}
+
+void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show)
+{
+    if (!filename)
+        return;
+
+    //ImageInfo **alphabet = load_alphabet();            // image.c
+    ImageInfo **alphabet = NULL;
+
+    // 1. read config file, like convolution layer
+    network net;// = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
+    if (weightfile)
+    {
+        // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
+        //load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
+    }
+
+
+
+
+    //set_batch_network(&net, 1);                    // network.c
+    srand(2222222);
+    yolov2_fuse_conv_batchnorm(net);
+    calculate_binary_weights(net);
+
+    // cancel here
+    if (quantized)
+    {
+        printf("\n\n Quantinization! \n\n");
+        //quantinization_and_get_multipliers(net);
+    }
+
+    clock_t time;
+    char buff[256];
+    char *input = buff;
+    int j;
+    float nms = .4;
+    while (1)
+    {
+        // 3. open image
+        strncpy(input, filename, 256);
+        ImageInfo im = ImageUtil::load_image(input, 0, 0, 3);            // image.c
+        ImageInfo sized = ImageUtil::resize_image(im, net.w, net.h);    // image.c
+        layer l = net.layers[net.n - 1];
+
+
+        float *X = sized.data;
+        time = clock();
+        //network_predict(net, X);
+
+        // 4. predict, the key
+        //network_predict_cpu(net, X);
+
+        printf("%s: Predicted in %f seconds.\n", input, (float)(clock() - time) / CLOCKS_PER_SEC); //sec(clock() - time));
+        //get_region_boxes_cpu(l, 1, 1, thresh, probs, boxes, 0, 0);            // get_region_boxes(): region_layer.c
+
+        // 5. save to ImageInfo or show directly
+        float hier_thresh = 0.5;
+        int ext_output = 1, letterbox = 0, nboxes = 0;
+        detection *dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
+        //aaaif (nms)
+          //aaa  do_nms_sort(dets, nboxes, l.classes, nms);
+
+        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
+        ImageUtil::save_image_png(im, "predictions");    // image.c
+        ImageUtil::free_image(im);                    // image.c
+        ImageUtil::free_image(sized);                // image.c
+        //free(boxes);
+        //free_ptrs((void **)probs, l.w*l.h*l.n);    // utils.c
+
+        if (filename) break;
+    }
+
+}
+
+void Detector::fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter)
+{
+    int j;
+//     for (j = 0; j < net->n; ++j)
+//     {
+//         layer l = net->layers[j];
+//         if (l.type == YOLO)
+//         {
+//             int count = get_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
+//             dets += count;
+//         }
+// 
+//         if (l.type == REGION)
+//         {
+//             custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
+//             dets += l.w*l.h*l.n;
+//         }
+//     }
+}
+
+detection * Detector::get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter)
+{
+//     detection *dets = make_network_boxes(net, thresh, num);
+//     fill_network_boxes(net, w, h, thresh, hier, map, relative, dets, letter);
+//     return dets;
+    return nullptr;
 }
 
 
@@ -79,6 +512,9 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         //}
         else if (lt == YOLO) {
             //l = parse_yolo(options, params);
+            YoloLayer* pLayer = new YoloLayer;
+            pLayer->load(&parser, sectionIndex, params);
+            l = pLayer->m_layerInfo;
         }
         //else if (lt == SOFTMAX) {
             //l = parse_softmax(options, params);
@@ -86,15 +522,24 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         //}
         else if (lt == MAXPOOL) {
             //l = parse_maxpool(options, params);
+            MaxpoolLayer* pLayer = new MaxpoolLayer;
+            pLayer->load(&parser, sectionIndex, params);
+            l = pLayer->m_layerInfo;
         }
         //else if (lt == REORG) {
             //l = parse_reorg(options, params);
         //}
         else if (lt == ROUTE) {
             //l = parse_route(options, params, net);
+            RouteLayer* pLayer = new RouteLayer;
+            pLayer->load(&parser, sectionIndex, params);
+            l = pLayer->m_layerInfo;
         }
         else if (lt == UPSAMPLE) {
             //l = parse_upsample(options, params, net);
+            UpsampleLayer* pLayer = new UpsampleLayer;
+            pLayer->load(&parser, sectionIndex, params);
+            l = pLayer->m_layerInfo;
         }
         //else if (lt == SHORTCUT) {
             //l = parse_shortcut(options, params, net);
@@ -138,245 +583,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
 
 
 
-// convolutional_layer Detector::parse_convolutional(const IniParser* pParser, int section, size_params params)
-// {
-// }
-
-/*
-// parser.c
-layer Detector::parse_region(list *options, size_params params)
-{
-    int coords = pParser->ReadInteger(section, "coords", 4);
-    int classes = pParser->ReadInteger(section, "classes", 20);
-    int num = pParser->ReadInteger(section, "num", 1);
-
-    layer l = make_region_layer(params.batch, params.w, params.h, num, classes, coords);
-    assert(l.outputs == params.inputs);
-
-    l.log = pParser->ReadInteger(section, "log", 0);
-    l.sqrt = pParser->ReadInteger(section, "sqrt", 0);
-
-    l.softmax = pParser->ReadInteger(section, "softmax", 0);
-    l.max_boxes = pParser->ReadInteger(section, "max", 30);
-    l.jitter = option_find_float(options, "jitter", .2);
-    l.rescore = pParser->ReadInteger(section, "rescore", 0);
-
-    l.thresh = option_find_float(options, "thresh", .5);
-    l.classfix = pParser->ReadInteger(section, "classfix", 0);
-    l.absolute = pParser->ReadInteger(section, "absolute", 0);
-    l.random = pParser->ReadInteger(section, "random", 0);
-
-    l.coord_scale = option_find_float(options, "coord_scale", 1);
-    l.object_scale = option_find_float(options, "object_scale", 1);
-    l.noobject_scale = option_find_float(options, "noobject_scale", 1);
-    l.class_scale = option_find_float(options, "class_scale", 1);
-    l.bias_match = pParser->ReadInteger(section, "bias_match", 0);
-
-    char *tree_file = option_find_str(options, "tree", 0);
-    if (tree_file) l.softmax_tree = read_tree(tree_file);
-    char *map_file = option_find_str(options, "map", 0);
-    if (map_file) l.map = read_map(map_file);
-
-    char *a = option_find_str(options, "anchors", 0);
-    if (a) {
-        int len = strlen(a);
-        int n = 1;
-        int i;
-        for (i = 0; i < len; ++i) {
-            if (a[i] == ',') ++n;
-        }
-        for (i = 0; i < n; ++i) {
-            float bias = atof(a);
-            l.biases[i] = bias;
-            a = strchr(a, ',') + 1;
-        }
-    }
-    return l;
-}
-
-// parser.c
-int * Detector::parse_yolo_mask(char *a, int *num)
-{
-    int *mask = 0;
-    if (a) {
-        int len = strlen(a);
-        int n = 1;
-        int i;
-        for (i = 0; i < len; ++i) {
-            if (a[i] == ',') ++n;
-        }
-        mask = calloc(n, sizeof(int));
-        for (i = 0; i < n; ++i) {
-            int val = atoi(a);
-            mask[i] = val;
-            a = strchr(a, ',') + 1;
-        }
-        *num = n;
-    }
-    return mask;
-}
-
-// parser.c
-layer Detector::parse_yolo(list *options, size_params params)
-{
-    int classes = pParser->ReadInteger(section, "classes", 20);
-    int total = pParser->ReadInteger(section, "num", 1);
-    int num = total;
-
-    char *a = option_find_str(options, "mask", 0);
-    int *mask = parse_yolo_mask(a, &num);
-    int max_boxes = pParser->ReadInteger(section, "max", 90);
-    layer l = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
-    if (l.outputs != params.inputs) {
-        printf("Error: l.outputs == params.inputs \n");
-        printf("filters= in the [convolutional]-layer doesn't correspond to classes= or mask= in [yolo]-layer \n");
-        exit(EXIT_FAILURE);
-    }
-    //assert(l.outputs == params.inputs);
-    char *map_file = option_find_str(options, "map", 0);
-    if (map_file) l.map = read_map(map_file);
-
-    l.jitter = option_find_float(options, "jitter", .2);
-    l.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
-
-    l.ignore_thresh = option_find_float(options, "ignore_thresh", .5);
-    l.truth_thresh = option_find_float(options, "truth_thresh", 1);
-    l.random = pParser->ReadInteger(section, "random", 0);
-
-    a = option_find_str(options, "anchors", 0);
-    if (a) {
-        int len = strlen(a);
-        int n = 1;
-        int i;
-        for (i = 0; i < len; ++i) {
-            if (a[i] == ',') ++n;
-        }
-        for (i = 0; i < n && i < total * 2; ++i) {
-            float bias = atof(a);
-            l.biases[i] = bias;
-            a = strchr(a, ',') + 1;
-        }
-    }
-    return l;
-}
-
-// parser.c
-softmax_layer Detector::parse_softmax(list *options, size_params params)
-{
-    int groups = pParser->ReadInteger(section, "groups", 1);
-    softmax_layer layer = make_softmax_layer(params.batch, params.inputs, groups);
-    layer.temperature = option_find_float_quiet(options, "temperature", 1);
-    char *tree_file = option_find_str(options, "tree", 0);
-    if (tree_file) layer.softmax_tree = read_tree(tree_file);
-    return layer;
-}
-
-// parser.c
-maxpool_layer Detector::parse_maxpool(list *options, size_params params)
-{
-    int stride = pParser->ReadInteger(section, "stride", 1);
-    int size = pParser->ReadInteger(section, "size", stride);
-    int padding = pParser->ReadInteger(section, "padding", size - 1);
-
-    int batch, h, w, c;
-    h = params.h;
-    w = params.w;
-    c = params.c;
-    batch = params.batch;
-    if (!(h && w && c)) error("Layer before maxpool layer must output image.");
-
-    maxpool_layer layer = make_maxpool_layer(batch, h, w, c, size, stride, padding);
-    return layer;
-}
-
-// parser.c
-layer Detector::parse_reorg(list *options, size_params params)
-{
-    int stride = pParser->ReadInteger(section, "stride", 1);
-    int reverse = pParser->ReadInteger(section, "reverse", 0);
-
-    int batch, h, w, c;
-    h = params.h;
-    w = params.w;
-    c = params.c;
-    batch = params.batch;
-    if (!(h && w && c)) error("Layer before reorg layer must output image.");
-
-    layer layer = make_reorg_layer(batch, w, h, c, stride, reverse);
-    return layer;
-}
-
-// parser.c
-layer Detector::parse_upsample(list *options, size_params params, network net)
-{
-
-    int stride = pParser->ReadInteger(section, "stride", 2);
-    layer l = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
-    l.scale = option_find_float_quiet(options, "scale", 1);
-    return l;
-}
-
-// parser.c
-layer Detector::parse_shortcut(list *options, size_params params, network net)
-{
-    char *l = option_find(options, "from");
-    int index = atoi(l);
-    if (index < 0) index = params.index + index;
-
-    int batch = params.batch;
-    layer from = net.layers[index];
-
-    layer s = make_shortcut_layer(batch, index, params.w, params.h, params.c, from.out_w, from.out_h, from.out_c);
-
-    char *activation_s = option_find_str(options, "activation", "linear");
-    ACTIVATION activation = get_activation(activation_s);
-    s.activation = activation;
-    return s;
-}
-
-// parser.c
-route_layer Detector::parse_route(list *options, size_params params, network net)
-{
-    char *l = option_find(options, "layers");
-    int len = strlen(l);
-    if (!l) error("Route Layer must specify input layers");
-    int n = 1;
-    int i;
-    for (i = 0; i < len; ++i) {
-        if (l[i] == ',') ++n;
-    }
-
-    int *layers = calloc(n, sizeof(int));
-    int *sizes = calloc(n, sizeof(int));
-    for (i = 0; i < n; ++i) {
-        int index = atoi(l);
-        l = strchr(l, ',') + 1;
-        if (index < 0) index = params.index + index;
-        layers[i] = index;
-        sizes[i] = net.layers[index].outputs;
-    }
-    int batch = params.batch;
-
-    route_layer layer = make_route_layer(batch, n, layers, sizes);
-
-    convolutional_layer first = net.layers[layers[0]];
-    layer.out_w = first.out_w;
-    layer.out_h = first.out_h;
-    layer.out_c = first.out_c;
-    for (i = 1; i < n; ++i) {
-        int index = layers[i];
-        convolutional_layer next = net.layers[index];
-        if (next.out_w == first.out_w && next.out_h == first.out_h) {
-            layer.out_c += next.out_c;
-        }
-        else {
-            layer.out_h = layer.out_w = layer.out_c = 0;
-        }
-    }
-
-    return layer;
-}
-*/
 
 JJ::learning_rate_policy Detector::get_policy(const char *s)
 {
@@ -422,7 +628,7 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
     std::string input_calibration= pIniParser->ReadString(netSectionIndex, "input_calibration", 0);
     if (!input_calibration.empty())
     {
-        splitFloat(net->input_calibration, input_calibration, ",");
+        StringUtil::splitFloat(net->input_calibration, input_calibration, ",");
     }
 
     net->adam = pIniParser->ReadInteger(netSectionIndex, "adam", 0);
@@ -465,8 +671,8 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
         if (l.empty() || p.empty())
             return false;// ("STEPS policy must have steps and scales in cfg file");
 
-        splitInt(net->steps, l, ",");
-        splitFloat(net->scales, p, ",");
+        StringUtil::splitInt(net->steps, l, ",");
+        StringUtil::splitFloat(net->scales, p, ",");
 
         //net->num_steps = net->steps.size();
     }
@@ -489,135 +695,42 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 
 
 
-void Detector::splitString(std::vector<std::string>& result, const std::string & str, const std::string& delims)
+
+void Detector::yolov2_forward_network_cpu(network net, network_state state)
 {
-    if (0 == str.compare(""))
+    //state.workspace = net.workspace;
+    int i;
+    for (i = 0; i < net.n; ++i)
     {
-        return;
+        state.index = i;
+        layer l = net.layers[i];
+        ILayer* pLayer = net.jjLayers[i];
+        pLayer->forward_layer_cpu(l, state);
+
+        //state.input = l.output;
     }
-
-    size_t start, pos;
-    start = 0;
-    do
-    {
-        pos = str.find(delims, start);
-        if (pos == std::string::npos)
-        {
-            std::string tmp_str = str.substr(start);
-            tmp_str = Trim(tmp_str, 10); // \n
-            tmp_str = Trim(tmp_str, 13); // \r
-            tmp_str = Trim(tmp_str, 32); // space
-            result.push_back(tmp_str);
-            break;
-        }
-        else
-        {
-            std::string tmp_str = str.substr(start, pos - start);
-            tmp_str = Trim(tmp_str, 10); // 
-            tmp_str = Trim(tmp_str, 13); // 
-            tmp_str = Trim(tmp_str, 32); // 
-            result.push_back(tmp_str);
-            start = pos + delims.length();
-        }
-
-    } while (pos != std::string::npos);
-    return;
 }
 
 
-void Detector::splitInt(std::vector<int>& result, const std::string & str, const std::string& delims)
+// detect on CPU
+float * Detector::network_predict_cpu(network net, float *input)
 {
-    if (0 == str.compare(""))
-    {
-        return;
-    }
-
-    size_t start, pos;
-    start = 0;
-    do
-    {
-        pos = str.find(delims, start);
-        if (pos == std::string::npos)
-        {
-            std::string tmp_str = str.substr(start);
-            tmp_str = Trim(tmp_str, 10); // \n
-            tmp_str = Trim(tmp_str, 13); // \r
-            tmp_str = Trim(tmp_str, 32); // space
-            result.push_back(atoi(tmp_str.c_str()));
-            break;
-        }
-        else
-        {
-            std::string tmp_str = str.substr(start, pos - start);
-            tmp_str = Trim(tmp_str, 10); // 
-            tmp_str = Trim(tmp_str, 13); // 
-            tmp_str = Trim(tmp_str, 32); // 
-            result.push_back(atoi(tmp_str.c_str()));
-            start = pos + delims.length();
-        }
-
-    } while (pos != std::string::npos);
-    return;
+    return nullptr;
+// 
+//     network_state state;
+//     state.net = net;
+//     state.index = 0;
+//     state.input = input;
+//     state.truth = 0;
+//     state.train = 0;
+//     state.delta = 0;
+//     yolov2_forward_network_cpu(net, state);    // network on CPU
+//                                             //float *out = get_network_output(net);
+// 
+//     // updated by junliang, begin, do not care about return 
+//     int i;
+//     for (i = net.n - 1; i > 0; --i) if (net.layers[i].type != COST) break;
+//     return net.layers[i].output;
 }
-
-
-void Detector::splitFloat(std::vector<float>& result, const std::string & str, const std::string& delims)
-{
-    if (0 == str.compare(""))
-    {
-        return;
-    }
-
-    size_t start, pos;
-    start = 0;
-    do
-    {
-        pos = str.find(delims, start);
-        if (pos == std::string::npos)
-        {
-            std::string tmp_str = str.substr(start);
-            tmp_str = Trim(tmp_str, 10); // \n
-            tmp_str = Trim(tmp_str, 13); // \r
-            tmp_str = Trim(tmp_str, 32); // space
-            result.push_back(atof(tmp_str.c_str()));
-            break;
-        }
-        else
-        {
-            std::string tmp_str = str.substr(start, pos - start);
-            tmp_str = Trim(tmp_str, 10); // 
-            tmp_str = Trim(tmp_str, 13); // 
-            tmp_str = Trim(tmp_str, 32); // 
-            result.push_back(atof(tmp_str.c_str()));
-            start = pos + delims.length();
-        }
-
-    } while (pos != std::string::npos);
-    return;
-}
-
-std::string Detector::Trim(const std::string& str, const char ch)
-{
-    if (str.empty())
-    {
-        return "";
-    }
-
-    if (str[0] != ch && str[str.size() - 1] != ch)
-    {
-        return str;
-    }
-
-    size_t pos_begin = str.find_first_not_of(ch, 0);
-    size_t pos_end = str.find_last_not_of(ch, str.size());
-
-    if (pos_begin == std::string::npos || pos_end == std::string::npos)
-    {
-        return "";
-    }
-
-    return str.substr(pos_begin, pos_end - pos_begin + 1);
-}
-
 
 NS_JJ_END
