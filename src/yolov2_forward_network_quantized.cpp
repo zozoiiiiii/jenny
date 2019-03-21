@@ -36,7 +36,7 @@ int * get_distribution(float *arr_ptr, int arr_size, int number_of_ranges, float
 {
     //const int number_of_ranges = 32;
     //const float start_range = 1.F / 65536;
-    int *count = calloc(number_of_ranges, sizeof(int));
+    int *count = (int*)calloc(number_of_ranges, sizeof(int));
     float min_val = 10000, max_val = 0;
 
     int i, j;
@@ -471,7 +471,7 @@ void gemm_nn_int8_int16(int M, int N, int K, int8_t ALPHA,
     int8_t *B, int ldb,
     int16_t *C, int ldc)
 {
-    int32_t *c_tmp = calloc(N, sizeof(int32_t));
+    int32_t *c_tmp = (int32_t*)calloc(N, sizeof(int32_t));
     int i, j, k;
     for (i = 0; i < M; ++i) {
         for (k = 0; k < K; ++k) {
@@ -495,7 +495,7 @@ void gemm_nn_int8_int32(int M, int N, int K, int8_t ALPHA,
     int8_t *B, int ldb,
     int32_t *C, int ldc)
 {
-    int32_t *c_tmp = calloc(N, sizeof(int32_t));
+    int32_t *c_tmp = (int32_t*)calloc(N, sizeof(int32_t));
     int i, j, k;
     for (i = 0; i < M; ++i) {
         for (k = 0; k < K; ++k) {
@@ -548,10 +548,10 @@ void forward_convolutional_layer_q(layer l, network_state state)
 
     //typedef int32_t conv_t;    // l.output
     typedef int16_t conv_t;    // l.output
-    conv_t *output_q = calloc(l.outputs, sizeof(conv_t));
+    conv_t *output_q = (conv_t*)calloc(l.outputs, sizeof(conv_t));
 
 
-    state.input_int8 = (int *)calloc(l.inputs, sizeof(int));
+    state.input_int8 = (int8_t *)calloc(l.inputs, sizeof(int));
     int z;
     for (z = 0; z < l.inputs; ++z) {
         //int16_t src = lround(state.input[k] * net.layers[0].input_quant_multipler);
@@ -656,7 +656,7 @@ void forward_convolutional_layer_q_old(layer l, network_state state, int return_
     //draw_distribution(state.input, l.inputs, NULL);
 
     typedef int16_t conv_t;    // l.output
-    conv_t *output_q = calloc(l.outputs, sizeof(conv_t));
+    conv_t *output_q = (conv_t*)calloc(l.outputs, sizeof(conv_t));
 
     ////////////////////////////////////
     // cudnnConvolutionBiasActivationForward()
@@ -970,7 +970,7 @@ void forward_region_layer_q(const layer l, network_state state)
         int layers = size*l.n;        // number of channels (where l.n = number of anchors)
         int batch = l.batch;
 
-        float *swap = calloc(layer_size*layers*batch, sizeof(float));
+        float *swap = (float*)calloc(layer_size*layers*batch, sizeof(float));
         int i, c, b;
         // batch index
         for (b = 0; b < batch; ++b) {
@@ -1024,6 +1024,14 @@ void forward_region_layer_q(const layer l, network_state state)
 
 
 
+void forward_maxpool_layer_cpu(const layer l, network_state state);
+void forward_route_layer_cpu(const layer l, network_state state);
+void forward_reorg_layer_cpu(const layer l, network_state state);
+void forward_upsample_layer_cpu(const layer l, network_state net);
+void forward_shortcut_layer_cpu(const layer l, network_state state);
+void forward_yolo_layer_cpu(const layer l, network_state state);
+void forward_region_layer_cpu(const layer l, network_state state);
+
 void yolov2_forward_network_q(network net, network_state state)
 {
     state.workspace = net.workspace;
@@ -1038,37 +1046,37 @@ void yolov2_forward_network_q(network net, network_state state)
 
             printf("\n %d - CONVOLUTIONAL \t\t l.size = %d  \n", i, l.size);
         }
-        else if (l.type == MAXPOOL) {
-            forward_maxpool_layer_cpu(l, state);
-            //printf("\n MAXPOOL \t\t l.size = %d  \n", l.size);
-        }
-        else if (l.type == ROUTE) {
-            forward_route_layer_cpu(l, state);
-            //printf("\n ROUTE \t\t\t l.n = %d  \n", l.n);
-        }
-        else if (l.type == REORG) {
-            forward_reorg_layer_cpu(l, state);
-            //printf("\n REORG \n");
-        }
-        else if (l.type == UPSAMPLE) {
-            forward_upsample_layer_cpu(l, state);
-            //printf("\n UPSAMPLE \n");
-        }
-        else if (l.type == SHORTCUT) {
-            forward_shortcut_layer_cpu(l, state);
-            //printf("\n SHORTCUT \n");
-        }
-        else if (l.type == YOLO) {
-            forward_yolo_layer_cpu(l, state);
-            //printf("\n YOLO \n");
-        }
-        else if (l.type == REGION) {
-            forward_region_layer_cpu(l, state);
-            //printf("\n REGION \n");
-        }
-        else {
-            printf("\n layer: %d \n", l.type);
-        }
+         else if (l.type == MAXPOOL) {
+             forward_maxpool_layer_cpu(l, state);
+             //printf("\n MAXPOOL \t\t l.size = %d  \n", l.size);
+         }
+         else if (l.type == ROUTE) {
+             forward_route_layer_cpu(l, state);
+             //printf("\n ROUTE \t\t\t l.n = %d  \n", l.n);
+         }
+         else if (l.type == REORG) {
+             forward_reorg_layer_cpu(l, state);
+             //printf("\n REORG \n");
+         }
+         else if (l.type == UPSAMPLE) {
+             forward_upsample_layer_cpu(l, state);
+             //printf("\n UPSAMPLE \n");
+         }
+         else if (l.type == SHORTCUT) {
+             forward_shortcut_layer_cpu(l, state);
+             //printf("\n SHORTCUT \n");
+         }
+         else if (l.type == YOLO) {
+             forward_yolo_layer_cpu(l, state);
+             //printf("\n YOLO \n");
+         }
+         else if (l.type == REGION) {
+             forward_region_layer_cpu(l, state);
+             //printf("\n REGION \n");
+         }
+         else {
+             printf("\n layer: %d \n", l.type);
+         }
 
 
         state.input = l.output;
@@ -1191,7 +1199,7 @@ float *network_predict_quantized_old(network net, float *input)
     state.net = net;
     state.index = 0;
     state.input = input;
-    state.input_int8 = calloc(net.w*net.h*net.c, sizeof(int8_t));
+    state.input_int8 = (int8_t*)calloc(net.w*net.h*net.c, sizeof(int8_t));
     state.truth = 0;
     state.train = 0;
     state.delta = 0;

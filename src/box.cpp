@@ -230,17 +230,17 @@ dbox diou(box a, box b)
     return dd;
 }
 
-typedef struct{
+struct sortable_bbox {
     int index;
-    int class;
+    int nClass;
     float **probs;
-} sortable_bbox;
+};
 
 int nms_comparator_v2(const void *pa, const void *pb)
 {
     sortable_bbox a = *(sortable_bbox *)pa;
     sortable_bbox b = *(sortable_bbox *)pb;
-    float diff = a.probs[a.index][b.class] - b.probs[b.index][b.class];
+    float diff = a.probs[a.index][b.nClass] - b.probs[b.index][b.nClass];
     if(diff < 0) return 1;
     else if(diff > 0) return -1;
     return 0;
@@ -249,17 +249,17 @@ int nms_comparator_v2(const void *pa, const void *pb)
 void do_nms_sort_v2(box *boxes, float **probs, int total, int classes, float thresh)
 {
     int i, j, k;
-    sortable_bbox *s = calloc(total, sizeof(sortable_bbox));
+    sortable_bbox *s = (sortable_bbox*)calloc(total, sizeof(sortable_bbox));
 
     for(i = 0; i < total; ++i){
         s[i].index = i;       
-        s[i].class = 0;
+        s[i].nClass = 0;
         s[i].probs = probs;
     }
 
     for(k = 0; k < classes; ++k){
         for(i = 0; i < total; ++i){
-            s[i].class = k;
+            s[i].nClass = k;
         }
         qsort(s, total, sizeof(sortable_bbox), nms_comparator_v2);
         for(i = 0; i < total; ++i){

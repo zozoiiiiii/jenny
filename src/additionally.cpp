@@ -206,8 +206,8 @@ void binary_align_weights(convolutional_layer *l)
 
     size_t align_weights_size = new_lda * m;
     l->align_bit_weights_size = align_weights_size / 8 + 1;
-    float *align_weights = calloc(align_weights_size, sizeof(float));
-    l->align_bit_weights = calloc(l->align_bit_weights_size, sizeof(char));
+    float *align_weights = (float*)calloc(align_weights_size, sizeof(float));
+    l->align_bit_weights = (char*)calloc(l->align_bit_weights_size, sizeof(char));
 
     size_t i, j;
     // align A without transpose
@@ -249,13 +249,13 @@ void binary_align_weights(convolutional_layer *l)
         //printf("\n l.index = %d \t aw[0] = %f, aw[1] = %f, aw[2] = %f, aw[3] = %f \n", l->index, align_weights[0], align_weights[1], align_weights[2], align_weights[3]);
         //memcpy(l->binary_weights, align_weights, (l->size * l->size * l->c * l->n) * sizeof(float));
 
-        float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
+        float_to_bit(align_weights, (unsigned char*)l->align_bit_weights, align_weights_size);
 
         get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
         //get_mean_array(l->binary_weights, m*new_lda, l->n, l->mean_arr);
     }
     else {
-        float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
+        float_to_bit(align_weights, (unsigned char*) l->align_bit_weights, align_weights_size);
 
         get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
     }
@@ -474,8 +474,9 @@ void transpose_bin(uint32_t *A, uint32_t *B, const int n, const int m,
             transpose_32x32_bits_reversed_diagonale(&A[a_index / 32], &B[b_index / 32], lda / 32, ldb / 32);
             //transpose_32x32_bits_my(&A[a_index/32], &B[b_index/32], lda/32, ldb/32);
         }
-        for (; j < m; ++j) {
-            if (get_bit(A, i*lda + j)) set_bit(B, j*ldb + i);
+        for (; j < m; ++j)
+        {
+            if (get_bit((const unsigned char*)A, i*lda + j)) set_bit((unsigned char* const)B, j*ldb + i);
         }
     }
 }
@@ -1327,7 +1328,7 @@ void im2col_cpu_custom_bin(float* data_im,
                     int col_index = c * new_ldb + h * width_col + w;
 
                     float val = data_im[im_col + width*(im_row + height*c_im)];
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
 
                 for (; w < width_col - pad; ++w) {
@@ -1338,7 +1339,7 @@ void im2col_cpu_custom_bin(float* data_im,
 
                     //data_col[col_index] = data_im[im_col + width*(im_row + height*c_im)];
                     float val = data_im[im_col + width*(im_row + height*c_im)];
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
             }
 
@@ -1352,7 +1353,7 @@ void im2col_cpu_custom_bin(float* data_im,
 
                     //data_col[col_index] = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
                     float val = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
             }
 
@@ -1366,7 +1367,7 @@ void im2col_cpu_custom_bin(float* data_im,
 
                     //data_col[col_index] = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
                     float val = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
             }
 
@@ -1380,7 +1381,7 @@ void im2col_cpu_custom_bin(float* data_im,
 
                     //data_col[col_index] = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
                     float val = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
             }
 
@@ -1394,7 +1395,7 @@ void im2col_cpu_custom_bin(float* data_im,
 
                     //data_col[col_index] = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
                     float val = im2col_get_pixel(data_im, height, width, channels, im_row, im_col, c_im, pad);
-                    if (val > 0) set_bit(data_col, col_index);
+                    if (val > 0) set_bit((unsigned char* const)data_col, col_index);
                 }
             }
         }
@@ -1515,7 +1516,7 @@ void float_to_bit(float *src, unsigned char *dst, size_t size)
     memset(dst, 0, dst_size);
 
     size_t i;
-    char *byte_arr = calloc(size, sizeof(char));
+    char *byte_arr = (char*)calloc(size, sizeof(char));
     for (i = 0; i < size; ++i) {
         if (src[i] > 0) byte_arr[i] = 1;
     }
@@ -1594,7 +1595,7 @@ char *fgetl(FILE *fp)
 {
     if (feof(fp)) return 0;
     size_t size = 512;
-    char *line = malloc(size * sizeof(char));
+    char *line = (char*)malloc(size * sizeof(char));
     if (!fgets(line, size, fp)) {
         free(line);
         return 0;
@@ -1605,7 +1606,7 @@ char *fgetl(FILE *fp)
     while ((line[curr - 1] != '\n') && !feof(fp)) {
         if (curr == size - 1) {
             size *= 2;
-            line = realloc(line, size * sizeof(char));
+            line = (char*)realloc(line, size * sizeof(char));
             if (!line) {
                 printf("%ld\n", (int long)size);
                 malloc_error();
@@ -1631,7 +1632,7 @@ int *read_map(char *filename)
     if (!file) file_error(filename);
     while ((str = fgetl(file))) {
         ++n;
-        map = realloc(map, n * sizeof(int));
+        map = (int*)realloc(map, n * sizeof(int));
         map[n - 1] = atoi(str);
     }
     return map;
@@ -1725,19 +1726,19 @@ void strip(char *s)
 // utils.c
 void list_insert(list *l, void *val)
 {
-    node *new = malloc(sizeof(node));
-    new->val = val;
-    new->next = 0;
+    node *pNew = (node*)malloc(sizeof(node));
+    pNew->val = val;
+    pNew->next = 0;
 
     if (!l->back) {
-        l->front = new;
-        new->prev = 0;
+        l->front = pNew;
+        pNew->prev = 0;
     }
     else {
-        l->back->next = new;
-        new->prev = l->back;
+        l->back->next = pNew;
+        pNew->prev = l->back;
     }
-    l->back = new;
+    l->back = pNew;
     ++l->size;
 }
 
@@ -1879,42 +1880,42 @@ tree *read_tree(char *filename)
     int groups = 0;
     int n = 0;
     while ((line = fgetl(fp)) != 0) {
-        char *id = calloc(256, sizeof(char));
+        char *id = (char*)calloc(256, sizeof(char));
         int parent = -1;
         sscanf(line, "%s %d", id, &parent);
-        t.parent = realloc(t.parent, (n + 1) * sizeof(int));
+        t.parent = (int*)realloc(t.parent, (n + 1) * sizeof(int));
         t.parent[n] = parent;
 
-        t.name = realloc(t.name, (n + 1) * sizeof(char *));
+        t.name = (char**)realloc(t.name, (n + 1) * sizeof(char *));
         t.name[n] = id;
         if (parent != last_parent) {
             ++groups;
-            t.group_offset = realloc(t.group_offset, groups * sizeof(int));
+            t.group_offset = (int*)realloc(t.group_offset, groups * sizeof(int));
             t.group_offset[groups - 1] = n - group_size;
-            t.group_size = realloc(t.group_size, groups * sizeof(int));
+            t.group_size = (int*)realloc(t.group_size, groups * sizeof(int));
             t.group_size[groups - 1] = group_size;
             group_size = 0;
             last_parent = parent;
         }
-        t.group = realloc(t.group, (n + 1) * sizeof(int));
+        t.group = (int*)realloc(t.group, (n + 1) * sizeof(int));
         t.group[n] = groups;
         ++n;
         ++group_size;
     }
     ++groups;
-    t.group_offset = realloc(t.group_offset, groups * sizeof(int));
+    t.group_offset = (int*)realloc(t.group_offset, groups * sizeof(int));
     t.group_offset[groups - 1] = n - group_size;
-    t.group_size = realloc(t.group_size, groups * sizeof(int));
+    t.group_size = (int*)realloc(t.group_size, groups * sizeof(int));
     t.group_size[groups - 1] = group_size;
     t.n = n;
     t.groups = groups;
-    t.leaf = calloc(n, sizeof(int));
+    t.leaf = (int*)calloc(n, sizeof(int));
     int i;
     for (i = 0; i < n; ++i) t.leaf[i] = 1;
     for (i = 0; i < n; ++i) if (t.parent[i] >= 0) t.leaf[t.parent[i]] = 0;
 
     fclose(fp);
-    tree *tree_ptr = calloc(1, sizeof(tree));
+    tree *tree_ptr = (tree*)calloc(1, sizeof(tree));
     *tree_ptr = t;
     //error(0);
     return tree_ptr;
@@ -1927,7 +1928,7 @@ tree *read_tree(char *filename)
 // list.c
 list *make_list()
 {
-    list *l = malloc(sizeof(list));
+    list *l =(list*) malloc(sizeof(list));
     l->size = 0;
     l->front = 0;
     l->back = 0;
@@ -1953,7 +1954,7 @@ list *get_paths(char *filename)
 // list.c
 void **list_to_array(list *l)
 {
-    void **a = calloc(l->size, sizeof(void*));
+    void **a = (void**)calloc(l->size, sizeof(void*));
     int count = 0;
     node *n = l->front;
     while (n) {
@@ -2018,8 +2019,8 @@ network make_network(int n)
 {
     network net = { 0 };
     net.n = n;
-    net.layers = calloc(net.n, sizeof(layer));
-    net.seen = calloc(1, sizeof(uint64_t));
+    net.layers = (layer*)calloc(net.n, sizeof(layer));
+    net.seen = (uint64_t*)calloc(1, sizeof(uint64_t));
 #ifdef GPU
     net.input_gpu = calloc(1, sizeof(float *));
     net.truth_gpu = calloc(1, sizeof(float *));
@@ -2261,7 +2262,7 @@ softmax_layer make_softmax_layer(int batch, int inputs, int groups)
     l.groups = groups;
     l.inputs = inputs;
     l.outputs = inputs;
-    l.output = calloc(inputs*batch, sizeof(float));
+    l.output = (float*)calloc(inputs*batch, sizeof(float));
     //l.delta = calloc(inputs*batch, sizeof(float));
 
     // commented only for this custom version of Yolo v2
@@ -2309,7 +2310,7 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.outputs = l.out_w*l.out_h*l.out_c;
     l.inputs = l.w*l.h*l.c;
     //l.delta = calloc(l.outputs*batch, sizeof(float));
-    l.output = calloc(l.outputs*batch, sizeof(float));;
+    l.output = (float*)calloc(l.outputs*batch, sizeof(float));;
 
     //l.forward = forward_upsample_layer;
 #ifdef GPU
@@ -2342,7 +2343,7 @@ layer make_shortcut_layer(int batch, int index, int w, int h, int c, int w2, int
 
     l.index = index;
 
-    l.output = calloc(l.outputs*batch, sizeof(float));;
+    l.output = (float*)calloc(l.outputs*batch, sizeof(float));;
 #ifdef GPU
     l.output_gpu = cuda_make_array(l.output, l.outputs*batch);
 #endif
@@ -2376,8 +2377,8 @@ layer make_reorg_layer(int batch, int w, int h, int c, int stride, int reverse)
     l.outputs = l.out_h * l.out_w * l.out_c;
     l.inputs = h*w*c;
     int output_size = l.out_h * l.out_w * l.out_c * batch;
-    l.output = calloc(output_size, sizeof(float));
-    l.output_int8 = calloc(output_size, sizeof(int8_t));
+    l.output = (float*)calloc(output_size, sizeof(float));
+    l.output_int8 = (int8_t *)calloc(output_size, sizeof(int8_t));
     //l.delta = calloc(output_size, sizeof(float));
 
     // commented only for this custom version of Yolo v2
@@ -2422,8 +2423,8 @@ route_layer make_route_layer(int batch, int n, int *input_layers, int *input_siz
     l.outputs = outputs;
     l.inputs = outputs;
     //l.delta = calloc(outputs*batch, sizeof(float));
-    l.output = calloc(outputs*batch, sizeof(float));
-    l.output_int8 = calloc(outputs*batch, sizeof(int8_t));
+    l.output = (float*)calloc(outputs*batch, sizeof(float));
+    l.output_int8 = (int8_t *)calloc(outputs*batch, sizeof(int8_t));
 
     // commented only for this custom version of Yolo v2
     //l.forward = forward_route_layer;
@@ -2463,11 +2464,11 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, int *mask, int 
     l.out_h = l.h;
     l.out_c = l.c;
     l.classes = classes;
-    l.cost = calloc(1, sizeof(float));
-    l.biases = calloc(total * 2, sizeof(float));
+    l.cost = (float*)calloc(1, sizeof(float));
+    l.biases = (float*)calloc(total * 2, sizeof(float));
     if (mask) l.mask = mask;
     else {
-        l.mask = calloc(n, sizeof(int));
+        l.mask = (int*)calloc(n, sizeof(int));
         for (i = 0; i < n; ++i) {
             l.mask[i] = i;
         }
@@ -2478,7 +2479,7 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, int *mask, int 
     l.max_boxes = max_boxes;
     l.truths = l.max_boxes*(4 + 1);    // 90*(4 + 1);
     //l.delta = calloc(batch*l.outputs, sizeof(float));
-    l.output = calloc(batch*l.outputs, sizeof(float));
+    l.output = (float*)calloc(batch*l.outputs, sizeof(float));
     for (i = 0; i < total * 2; ++i) {
         l.biases[i] = .5;
     }
@@ -2507,14 +2508,14 @@ region_layer make_region_layer(int batch, int w, int h, int n, int classes, int 
     l.w = w;
     l.classes = classes;
     l.coords = coords;
-    l.cost = calloc(1, sizeof(float));
-    l.biases = calloc(n * 2, sizeof(float));
+    l.cost = (float*)calloc(1, sizeof(float));
+    l.biases = (float*)calloc(n * 2, sizeof(float));
     //l.bias_updates = calloc(n * 2, sizeof(float));
     l.outputs = h*w*n*(classes + coords + 1);
     l.inputs = l.outputs;
     l.truths = 30 * (5);
     //l.delta = calloc(batch*l.outputs, sizeof(float));
-    l.output = calloc(batch*l.outputs, sizeof(float));
+    l.output = (float*)calloc(batch*l.outputs, sizeof(float));
     int i;
     for (i = 0; i < n * 2; ++i) {
         l.biases[i] = .5;
@@ -2564,9 +2565,9 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     l.size = size;
     l.stride = stride;
     int output_size = l.out_h * l.out_w * l.out_c * batch;
-    l.indexes = calloc(output_size, sizeof(int));
-    l.output = calloc(output_size, sizeof(float));
-    l.output_int8 = calloc(output_size, sizeof(int8_t));
+    l.indexes = (int*)calloc(output_size, sizeof(int));
+    l.output = (float*)calloc(output_size, sizeof(float));
+    l.output_int8 = (int8_t *)calloc(output_size, sizeof(int8_t));
     //l.delta = calloc(output_size, sizeof(float));
     // commented only for this custom version of Yolo v2
     //l.forward = forward_maxpool_layer;
@@ -2682,12 +2683,12 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
     l.pad = padding;
     l.batch_normalize = batch_normalize;
 
-    l.weights = calloc(c*n*size*size, sizeof(float));
-    l.weights_int8 = calloc(c*n*size*size, sizeof(int8_t));
+    l.weights = (float*)calloc(c*n*size*size, sizeof(float));
+    l.weights_int8 = (int8_t*)calloc(c*n*size*size, sizeof(int8_t));
     //l.weight_updates = calloc(c*n*size*size, sizeof(float));
 
-    l.biases = calloc(n, sizeof(float));
-    l.biases_quant = calloc(n, sizeof(float));
+    l.biases = (float*)calloc(n, sizeof(float));
+    l.biases_quant = (float*)calloc(n, sizeof(float));
     //l.bias_updates = calloc(n, sizeof(float));
 
     // float scale = 1./sqrt(size*size*c);
@@ -2701,8 +2702,8 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
     l.outputs = l.out_h * l.out_w * l.out_c;
     l.inputs = l.w * l.h * l.c;
 
-    l.output = calloc(l.batch*l.outputs, sizeof(float));
-    l.output_int8 = calloc(l.batch*l.outputs, sizeof(int8_t));
+    l.output = (float*)calloc(l.batch*l.outputs, sizeof(float));
+    l.output_int8 = (int8_t*)calloc(l.batch*l.outputs, sizeof(int8_t));
     //l.delta = calloc(l.batch*l.outputs, sizeof(float));
 
     // commented only for this custom version of Yolo v2
@@ -2710,43 +2711,43 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
     ///l.backward = backward_convolutional_layer;
     ///l.update = update_convolutional_layer;
     if (binary) {
-        l.binary_weights = calloc(c*n*size*size, sizeof(float));
-        l.cweights = calloc(c*n*size*size, sizeof(char));
-        l.scales = calloc(n, sizeof(float));
+        l.binary_weights = (float*)calloc(c*n*size*size, sizeof(float));
+        l.cweights = (char*)calloc(c*n*size*size, sizeof(char));
+        l.scales = (float*)calloc(n, sizeof(float));
     }
     if (xnor) {
-        l.binary_weights = calloc(c*n*size*size, sizeof(float));
-        l.binary_input = calloc(l.inputs*l.batch, sizeof(float));
+        l.binary_weights = (float*)calloc(c*n*size*size, sizeof(float));
+        l.binary_input = (float*)calloc(l.inputs*l.batch, sizeof(float));
 
         int align = 32;// 8;
         int src_align = l.out_h*l.out_w;
         l.bit_align = src_align + (align - src_align % align);
 
-        l.mean_arr = calloc(l.n, sizeof(float));
+        l.mean_arr = (float*)calloc(l.n, sizeof(float));
     }
 
     if (batch_normalize) {
-        l.scales = calloc(n, sizeof(float));
+        l.scales = (float*)calloc(n, sizeof(float));
         //l.scale_updates = calloc(n, sizeof(float));
         for (i = 0; i < n; ++i) {
             l.scales[i] = 1;
         }
 
-        l.mean = calloc(n, sizeof(float));
-        l.variance = calloc(n, sizeof(float));
+        l.mean = (float*)calloc(n, sizeof(float));
+        l.variance = (float*)calloc(n, sizeof(float));
 
         //l.mean_delta = calloc(n, sizeof(float));
         //l.variance_delta = calloc(n, sizeof(float));
 
-        l.rolling_mean = calloc(n, sizeof(float));
-        l.rolling_variance = calloc(n, sizeof(float));
-        l.x = calloc(l.batch*l.outputs, sizeof(float));
-        l.x_norm = calloc(l.batch*l.outputs, sizeof(float));
+        l.rolling_mean = (float*)calloc(n, sizeof(float));
+        l.rolling_variance = (float*)calloc(n, sizeof(float));
+        l.x = (float*)calloc(l.batch*l.outputs, sizeof(float));
+        l.x_norm = (float*)calloc(l.batch*l.outputs, sizeof(float));
     }
     if (adam) {
         l.adam = 1;
-        l.m = calloc(c*n*size*size, sizeof(float));
-        l.v = calloc(c*n*size*size, sizeof(float));
+        l.m = (float*)calloc(c*n*size*size, sizeof(float));
+        l.v = (float*)calloc(c*n*size*size, sizeof(float));
     }
 
 
@@ -2844,7 +2845,7 @@ void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, flo
 image make_image(int w, int h, int c)
 {
     image out = make_empty_image(w, h, c);
-    out.data = calloc(h*w*c, sizeof(float));
+    out.data = (float*)calloc(h*w*c, sizeof(float));
     return out;
 }
 
@@ -3014,7 +3015,7 @@ image load_image_cv(char *filename, int channels)
 image copy_image(image p)
 {
     image copy = p;
-    copy.data = calloc(p.h*p.w*p.c, sizeof(float));
+    copy.data = (float*)calloc(p.h*p.w*p.c, sizeof(float));
     memcpy(copy.data, p.data, p.h*p.w*p.c * sizeof(float));
     return copy;
 }
@@ -3072,7 +3073,7 @@ void save_image_png(image im, const char *name)
 {
     char buff[256];
     sprintf(buff, "%s.png", name);
-    unsigned char *data = calloc(im.w*im.h*im.c, sizeof(char));
+    unsigned char *data = (unsigned char*)calloc(im.w*im.h*im.c, sizeof(char));
     int i, k;
     for (k = 0; k < im.c; ++k) {
         for (i = 0; i < im.w*im.h; ++i) {
@@ -3124,7 +3125,7 @@ typedef struct {
 // option_list.c
 void option_insert(list *l, char *key, char *val)
 {
-    kvp *p = malloc(sizeof(kvp));
+    kvp *p = (kvp*)malloc(sizeof(kvp));
     p->key = key;
     p->val = val;
     p->used = 0;
@@ -3286,7 +3287,7 @@ list *read_cfg(char *filename)
         strip(line);
         switch (line[0]) {
         case '[':
-            current = malloc(sizeof(section));
+            current = (section*)malloc(sizeof(section));
             list_insert(sections, current);
             current->options = make_list();
             current->type = line;
@@ -3496,7 +3497,7 @@ int *parse_yolo_mask(char *a, int *num)
         for (i = 0; i < len; ++i) {
             if (a[i] == ',') ++n;
         }
-        mask = calloc(n, sizeof(int));
+        mask = (int*)calloc(n, sizeof(int));
         for (i = 0; i < n; ++i) {
             int val = atoi(a);
             mask[i] = val;
@@ -3637,8 +3638,8 @@ route_layer parse_route(list *options, size_params params, network net)
         if (l[i] == ',') ++n;
     }
 
-    int *layers = calloc(n, sizeof(int));
-    int *sizes = calloc(n, sizeof(int));
+    int *layers = (int*)calloc(n, sizeof(int));
+    int *sizes = (int*)calloc(n, sizeof(int));
     for (i = 0; i < n; ++i) {
         int index = atoi(l);
         l = strchr(l, ',') + 1;
@@ -3793,8 +3794,8 @@ void parse_net_options(list *options, network *net)
         for (i = 0; i < len; ++i) {
             if (l[i] == ',') ++n;
         }
-        int *steps = calloc(n, sizeof(int));
-        float *scales = calloc(n, sizeof(float));
+        int *steps = (int*)calloc(n, sizeof(int));
+        float *scales = (float*)calloc(n, sizeof(float));
         for (i = 0; i < n; ++i) {
             int step = atoi(l);
             float scale = atof(p);
@@ -3944,7 +3945,7 @@ network parse_network_cfg(char *filename, int batch, int quantized)
     if (workspace_size)
     {
         //printf("%ld\n", workspace_size);
-        net.workspace = calloc(1, workspace_size);
+        net.workspace = (float*)calloc(1, workspace_size);
     }
     return net;
 }
@@ -4107,11 +4108,11 @@ detection *make_network_boxes(network *net, float thresh, int *num)
     int i;
     int nboxes = num_detections(net, thresh);
     if (num) *num = nboxes;
-    detection *dets = calloc(nboxes, sizeof(detection));
+    detection *dets = (detection*)calloc(nboxes, sizeof(detection));
     for (i = 0; i < nboxes; ++i) {
-        dets[i].prob = calloc(l.classes, sizeof(float));
+        dets[i].prob = (float*)calloc(l.classes, sizeof(float));
         if (l.coords > 4) {
-            dets[i].mask = calloc(l.coords - 4, sizeof(float));
+            dets[i].mask = (float*)calloc(l.coords - 4, sizeof(float));
         }
     }
     return dets;
@@ -4228,10 +4229,10 @@ void get_region_boxes_cpu(layer l, int w, int h, float thresh, float **probs, bo
 
 void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, float thresh, int *map, float hier, int relative, detection *dets, int letter)
 {
-    box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
-    float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
+    box *boxes = (box*)calloc(l.w*l.h*l.n, sizeof(box));
+    float **probs = (float**)calloc(l.w*l.h*l.n, sizeof(float *));
     int i, j;
-    for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = calloc(l.classes, sizeof(float *));
+    for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)calloc(l.classes, sizeof(float *));
     get_region_boxes_cpu(l, 1, 1, thresh, probs, boxes, 0, map);
     for (j = 0; j < l.w*l.h*l.n; ++j) {
         dets[j].classes = l.classes;
@@ -4302,7 +4303,7 @@ void *load_thread(void *ptr)
 pthread_t load_data_in_thread(load_args args)
 {
     pthread_t thread;
-    struct load_args *ptr = calloc(1, sizeof(struct load_args));
+    struct load_args *ptr = (load_args*)calloc(1, sizeof(struct load_args));
     *ptr = args;
     if (pthread_create(&thread, 0, load_thread, ptr)) error("Thread creation failed");
     return thread;
@@ -4310,7 +4311,7 @@ pthread_t load_data_in_thread(load_args args)
 
 box_label *read_boxes(char *filename, int *n)
 {
-    box_label *boxes = calloc(1, sizeof(box_label));
+    box_label *boxes = (box_label*)calloc(1, sizeof(box_label));
     FILE *file = fopen(filename, "r");
     if (!file)
     {
@@ -4322,7 +4323,7 @@ box_label *read_boxes(char *filename, int *n)
     int id;
     int count = 0;
     while (fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5) {
-        boxes = realloc(boxes, (count + 1) * sizeof(box_label));
+        boxes = (box_label*)realloc(boxes, (count + 1) * sizeof(box_label));
         boxes[count].id = id;
         boxes[count].x = x;
         boxes[count].y = y;
@@ -4452,11 +4453,11 @@ void validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float
     //const float iou_thresh = 0.5;
 
     int nthreads = 4;
-    image *val = calloc(nthreads, sizeof(image));
-    image *val_resized = calloc(nthreads, sizeof(image));
-    image *buf = calloc(nthreads, sizeof(image));
-    image *buf_resized = calloc(nthreads, sizeof(image));
-    pthread_t *thr = calloc(nthreads, sizeof(pthread_t));
+    image *val = (image*)calloc(nthreads, sizeof(image));
+    image *val_resized = (image*)calloc(nthreads, sizeof(image));
+    image *buf = (image*)calloc(nthreads, sizeof(image));
+    image *buf_resized = (image*)calloc(nthreads, sizeof(image));
+    pthread_t *thr = (pthread_t*)calloc(nthreads, sizeof(pthread_t));
 
     load_args args = { 0 };
     args.w = net.w;
@@ -4469,11 +4470,11 @@ void validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float
     int tp_for_thresh = 0;
     int fp_for_thresh = 0;
 
-    box_prob *detections = calloc(1, sizeof(box_prob));
+    box_prob *detections = (box_prob *)calloc(1, sizeof(box_prob));
     int detections_count = 0;
     int unique_truth_count = 0;
 
-    int *truth_classes_count = calloc(classes, sizeof(int));
+    int *truth_classes_count = (int*)calloc(classes, sizeof(int));
 
     for (t = 0; t < nthreads; ++t) {
         args.path = paths[i + t];
@@ -4576,7 +4577,7 @@ void validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float
                     float prob = dets[i].prob[class_id];
                     if (prob > 0) {
                         detections_count++;
-                        detections = realloc(detections, detections_count * sizeof(box_prob));
+                        detections = (box_prob*)realloc(detections, detections_count * sizeof(box_prob));
                         detections[detections_count - 1].b = dets[i].bbox;
                         detections[detections_count - 1].p = prob;
                         detections[detections_count - 1].image_index = image_index;
@@ -4660,14 +4661,14 @@ void validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float
     } pr_t;
 
     // for PR-curve
-    pr_t **pr = calloc(classes, sizeof(pr_t*));
+    pr_t **pr = (pr_t**)calloc(classes, sizeof(pr_t*));
     for (i = 0; i < classes; ++i) {
-        pr[i] = calloc(detections_count, sizeof(pr_t));
+        pr[i] = (pr_t*)calloc(detections_count, sizeof(pr_t));
     }
     printf("detections_count = %d, unique_truth_count = %d  \n", detections_count, unique_truth_count);
 
 
-    int *truth_flags = calloc(unique_truth_count, sizeof(int));
+    int *truth_flags = (int*)calloc(unique_truth_count, sizeof(int));
 
     int rank;
     for (rank = 0; rank < detections_count; ++rank) {
@@ -4816,11 +4817,11 @@ void validate_calibrate_valid(char *datacfg, char *cfgfile, char *weightfile, in
     float nms = .45;
 
     int nthreads = 4;
-    image *val = calloc(nthreads, sizeof(image));
-    image *val_resized = calloc(nthreads, sizeof(image));
-    image *buf = calloc(nthreads, sizeof(image));
-    image *buf_resized = calloc(nthreads, sizeof(image));
-    pthread_t *thr = calloc(nthreads, sizeof(pthread_t));
+    image *val = (image*)calloc(nthreads, sizeof(image));
+    image *val_resized = (image*)calloc(nthreads, sizeof(image));
+    image *buf = (image*)calloc(nthreads, sizeof(image));
+    image *buf_resized = (image*)calloc(nthreads, sizeof(image));
+    pthread_t *thr = (pthread_t*)calloc(nthreads, sizeof(pthread_t));
 
     load_args args = { 0 };
     args.w = net.w;
@@ -4833,11 +4834,11 @@ void validate_calibrate_valid(char *datacfg, char *cfgfile, char *weightfile, in
     int tp_for_thresh = 0;
     int fp_for_thresh = 0;
 
-    box_prob *detections = calloc(1, sizeof(box_prob));
+    box_prob *detections = (box_prob*) calloc(1, sizeof(box_prob));
     int detections_count = 0;
     int unique_truth_count = 0;
 
-    int *truth_classes_count = calloc(classes, sizeof(int));
+    int *truth_classes_count = (int*)calloc(classes, sizeof(int));
 
     for (t = 0; t < nthreads; ++t) {
         args.path = paths[i + t];

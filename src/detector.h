@@ -10,10 +10,10 @@
 #include <string>
 #include "layers/convolutional_layer.h"
 #include "parser/ini_parser.h"
-#include "layers/string_util.h"
+#include "utils/string_util.h"
 #include "box.h"
 
-#include "image.h"
+#include "utils/image_util.h"
 
 NS_JJ_BEGIN
 
@@ -66,6 +66,7 @@ private:
 
 
     void binary_align_weights(layer *l);
+
 private:
     JJ::network* m_pNet;
 };

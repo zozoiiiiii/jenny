@@ -146,39 +146,39 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\additionally.c" />
-    <ClCompile Include="src\box.c" />
+    <ClCompile Include="src\additionally.cpp" />
+    <ClCompile Include="src\box.cpp" />
     <ClCompile Include="src\detector.cpp" />
-    <ClCompile Include="src\image.cpp" />
     <ClCompile Include="src\layers\convolutional_layer.cpp" />
     <ClCompile Include="src\layers\layer.cpp" />
     <ClCompile Include="src\layers\maxpool_layer.cpp" />
     <ClCompile Include="src\layers\network.cpp" />
     <ClCompile Include="src\layers\route_layer.cpp" />
     <ClCompile Include="src\layers\upsample_layer.cpp" />
-    <ClCompile Include="src\layers\string_util.cpp" />
     <ClCompile Include="src\layers\yolo_layer.cpp" />
-    <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\parser\ini_parser.cpp" />
-    <ClCompile Include="src\yolov2_forward_network.c" />
-    <ClCompile Include="src\yolov2_forward_network_quantized.c" />
+    <ClCompile Include="src\utils\image_util.cpp" />
+    <ClCompile Include="src\utils\string_util.cpp" />
+    <ClCompile Include="src\yolov2_forward_network.cpp" />
+    <ClCompile Include="src\yolov2_forward_network_quantized.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\additionally.h" />
     <ClInclude Include="src\box.h" />
     <ClInclude Include="src\detector.h" />
-    <ClInclude Include="src\image.h" />
     <ClInclude Include="src\layers\convolutional_layer.h" />
     <ClInclude Include="src\layers\layer.h" />
     <ClInclude Include="src\layers\maxpool_layer.h" />
     <ClInclude Include="src\layers\network.h" />
     <ClInclude Include="src\layers\route_layer.h" />
     <ClInclude Include="src\layers\upsample_layer.h" />
-    <ClInclude Include="src\layers\string_util.h" />
     <ClInclude Include="src\layers\yolo_layer.h" />
     <ClInclude Include="src\parser\ini_parser.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\stb_image_write.h" />
+    <ClInclude Include="src\utils\image_util.h" />
+    <ClInclude Include="src\utils\string_util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

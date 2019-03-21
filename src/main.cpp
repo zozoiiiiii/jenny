@@ -5,7 +5,7 @@
 #include "pthread.h"
 
 #include "additionally.h"
-//#include "detector.h"
+#include "detector.h"
 
 #ifdef OPENCV
 #include "opencv2/highgui/highgui_c.h"
@@ -41,7 +41,7 @@ typedef struct detection_with_class {
 detection_with_class* get_actual_detections(detection *dets, int dets_num, float thresh, int* selected_detections_num)
 {
     int selected_num = 0;
-    detection_with_class* result_arr = calloc(dets_num, sizeof(detection_with_class));
+    detection_with_class* result_arr = (detection_with_class*)calloc(dets_num, sizeof(detection_with_class));
     int i;
     for (i = 0; i < dets_num; ++i)
     {
@@ -638,13 +638,13 @@ void run_detector(int argc, char **argv)
     char *filename = (argc > 6) ? argv[6] : 0;
 
     // load object names
-    char **names = calloc(10000, sizeof(char *));
+    char **names = (char**)calloc(10000, sizeof(char *));
     int obj_count = 0;
     FILE* fp;
     char buffer[255];
     fp = fopen(obj_names, "r");
     while (fgets(buffer, 255, (FILE*)fp)) {
-        names[obj_count] = calloc(strlen(buffer)+1, sizeof(char));
+        names[obj_count] = (char*)calloc(strlen(buffer)+1, sizeof(char));
         strcpy(names[obj_count], buffer);
         names[obj_count][strlen(buffer) - 1] = '\0'; //remove newline
         ++obj_count;

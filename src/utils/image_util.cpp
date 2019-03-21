@@ -1,11 +1,18 @@
-#include "image.h"
+#include "image_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <math.h>
-#include "stb_image_write.h"
-#include "stb_image.h"
+#include "../stb_image_write.h"
+#include "../stb_image.h"
+
+// namespace
+#ifndef NS_JJ_BEGIN
+#define NS_JJ_BEGIN                     namespace JJ {
+#define NS_JJ_END                       }
+#define USING_NS_JJ                     using namespace JJ;
+#endif
 
 NS_JJ_BEGIN
 
