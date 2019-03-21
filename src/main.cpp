@@ -304,8 +304,8 @@ void run_detector(int argc, char **argv)
 
     if (0 == strcmp(argv[2], "test"))
     {
-        test_detector_cpu(names, cfg, weights, filename, thresh, quantized, dont_show);
-        //JJ::Detector::instance()->detectImage(names, cfg, weights, filename, thresh, quantized, dont_show);
+        //test_detector_cpu(names, cfg, weights, filename, thresh, quantized, dont_show);
+        JJ::Detector::instance()->detectImage(names, cfg, weights, filename, thresh, quantized, dont_show);
     }
 
 

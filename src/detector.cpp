@@ -140,66 +140,14 @@ void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float 
 
 
 // fuse convolutional and batch_norm weights into one convolutional-layer
-void Detector::yolov2_fuse_conv_batchnorm(network net)
+void Detector::yolov2_fuse_conv_batchnorm(network* net)
 {
-    int j;
-    for (j = 0; j < net.n; ++j) {
-        layer *l = &net.layers[j];
-
-        if (l->type == CONVOLUTIONAL)
-        {
-            printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
-
-            if (l->batch_normalize)
-            {
-                int f;
-                for (f = 0; f < l->n; ++f)
-                {
-                    l->biases[f] = l->biases[f] - l->scales[f] * l->rolling_mean[f] / (sqrtf(l->rolling_variance[f]) + .000001f);
-
-                    const size_t filter_size = l->size*l->size*l->c;
-                    int i;
-                    for (i = 0; i < filter_size; ++i) {
-                        int w_index = f * filter_size + i;
-
-                        l->weights[w_index] = l->weights[w_index] * l->scales[f] / (sqrtf(l->rolling_variance[f]) + .000001f);
-                    }
-                }
-
-                l->batch_normalize = 0;
-            }
-        }
-        else {
-            printf(" Skip layer: %d \n", l->type);
-        }
-    }
+  
 }
 
-void Detector::calculate_binary_weights(network net)
+void Detector::calculate_binary_weights(network* net)
 {
-    int j;
-    for (j = 0; j < net.n; ++j)
-    {
-        layer *l = &net.layers[j];
-
-        if (l->type == CONVOLUTIONAL)
-        {
-            //printf(" Merges Convolutional-%d and batch_norm \n", j);
-
-            if (l->xnor)
-            {
-                //printf("\n %d \n", j);
-                l->lda_align = 256; // 256bit for AVX2
-
-                binary_align_weights(l);
-
-                if (net.layers[j].use_bin_output) {
-                    l->activation = LINEAR;
-                }
-            }
-        }
-    }
-    //printf("\n calculate_binary_weights Done! \n");
+   
 
 }
 
@@ -259,88 +207,12 @@ void get_mean_array(float *src, size_t size, size_t filters, float *mean_arr) {
 
 void Detector::binary_align_weights(layer *l)
 {
-    int m = l->n;
-    int k = l->size*l->size*l->c;
-    size_t new_lda = k + (l->lda_align - k % l->lda_align); // (k / 8 + 1) * 8;
-    l->new_lda = new_lda;
-
-    binarize_weights(l->weights, m, k, l->binary_weights);
-
-    size_t align_weights_size = new_lda * m;
-    l->align_bit_weights_size = align_weights_size / 8 + 1;
-    float *align_weights = (float*)calloc(align_weights_size, sizeof(float));
-    l->align_bit_weights = (char*)calloc(l->align_bit_weights_size, sizeof(char));
-
-    size_t i, j;
-    // align A without transpose
-    for (i = 0; i < m; ++i) {
-        for (j = 0; j < k; ++j) {
-            align_weights[i*new_lda + j] = l->binary_weights[i*k + j];
-        }
-    }
-
-
-    //if (l->c % 32 == 0)
-    if (gpu_index < 0 && l->stride == 1 && l->pad == 1 && l->c % 32 == 0)
-    {
-        int fil, chan;
-        const int items_per_filter = l->c * l->size * l->size;
-        //const int dst_items_per_filter = new_lda;
-        for (fil = 0; fil < l->n; ++fil)
-        {
-            for (chan = 0; chan < l->c; chan += 32)
-            {
-                const int items_per_channel = l->size*l->size;
-                for (i = 0; i < items_per_channel; ++i)
-                {
-                    uint32_t val = 0;
-                    int c_pack;
-                    for (c_pack = 0; c_pack < 32; ++c_pack) {
-                        float src = l->binary_weights[fil*items_per_filter + (chan + c_pack)*items_per_channel + i];
-
-                        //align_weights[fil*items_per_filter + chan*items_per_channel + i * 32 + c_pack] = src;
-
-                        align_weights[fil*new_lda + chan * items_per_channel + i * 32 + c_pack] = src;
-                        //val |= (src << c);
-                    }
-
-                }
-            }
-        }
-
-        //printf("\n l.index = %d \t aw[0] = %f, aw[1] = %f, aw[2] = %f, aw[3] = %f \n", l->index, align_weights[0], align_weights[1], align_weights[2], align_weights[3]);
-        //memcpy(l->binary_weights, align_weights, (l->size * l->size * l->c * l->n) * sizeof(float));
-
-        //float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
-
-        //get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
-        //get_mean_array(l->binary_weights, m*new_lda, l->n, l->mean_arr);
-    }
-    else {
-        //float_to_bit(align_weights, l->align_bit_weights, align_weights_size);
-
-        //get_mean_array(l->binary_weights, m*k, l->n, l->mean_arr);
-    }
-    //l->mean_arr = calloc(l->n, sizeof(float));
-
-    //get_mean_array(align_weights, align_weights_size, l->n, l->mean_arr);
-
-
-    free(align_weights);
+   
 }
 
 
 
 
-void Detector::loadData(const char* cfgfile, const char* weightfile)
-{
-    JJ::network* net = readConfigFile(cfgfile, 1, 0);
-    if (weightfile)
-    {
-        // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
-        //load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
-    }
-}
 
 
 Detector* Detector::instance()
@@ -358,11 +230,11 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     ImageInfo **alphabet = NULL;
 
     // 1. read config file, like convolution layer
-    network net;// = readConfigFile(cfgfile, 1, quantized);    // parser.c
+    network* net = readConfigFile(cfgfile, 1, quantized);    // parser.c
     if (weightfile)
     {
         // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
-        //load_weights_upto_cpu(&net, weightfile, net.n);    // parser.c
+        readWeightFile(net, weightfile, net->n);
     }
 
 
@@ -390,8 +262,8 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         // 3. open image
         strncpy(input, filename, 256);
         ImageInfo im = ImageUtil::load_image(input, 0, 0, 3);            // image.c
-        ImageInfo sized = ImageUtil::resize_image(im, net.w, net.h);    // image.c
-        layer l = net.layers[net.n - 1];
+        ImageInfo sized = ImageUtil::resize_image(im, net->w, net->h);    // image.c
+        layer* l = net->jjLayers[net->n - 1]->getLayer();
 
 
         float *X = sized.data;
@@ -407,18 +279,16 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         // 5. save to ImageInfo or show directly
         float hier_thresh = 0.5;
         int ext_output = 1, letterbox = 0, nboxes = 0;
-        detection *dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
-        //aaaif (nms)
-          //aaa  do_nms_sort(dets, nboxes, l.classes, nms);
+        detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
+        if (nms)
+            do_nms_sort(dets, nboxes, l->classes, nms);
 
-        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
+        //draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
         ImageUtil::save_image_png(im, "predictions");    // image.c
         ImageUtil::free_image(im);                    // image.c
         ImageUtil::free_image(sized);                // image.c
-        //free(boxes);
-        //free_ptrs((void **)probs, l.w*l.h*l.n);    // utils.c
-
-        if (filename) break;
+        if (filename)
+            break;
     }
 
 }
@@ -449,6 +319,66 @@ detection * Detector::get_network_boxes(network *net, int w, int h, float thresh
 //     fill_network_boxes(net, w, h, thresh, hier, map, relative, dets, letter);
 //     return dets;
     return nullptr;
+}
+
+
+void load_convolutional_weights_cpu(ConvolutionLayer* pLayer, FILE *fp)
+{
+    layer* pLayerInfo = pLayer->getLayer();
+    ConvolutionWeight* pWeight = pLayer->getWeight();
+    int num = pLayerInfo->n * pLayerInfo->c * pLayerInfo->size * pLayerInfo->size;
+    int n = pLayerInfo->n;
+    fread(pWeight->biases, sizeof(float), n, fp);
+    if (pLayerInfo->batch_normalize && (!pLayerInfo->dontloadscales))
+    {
+        fread(pWeight->scales, sizeof(float), n, fp);
+        fread(pWeight->rolling_mean, sizeof(float), n, fp);
+        fread(pWeight->rolling_variance, sizeof(float), n, fp);
+    }
+    fread(pWeight->weights, sizeof(float), num, fp);
+}
+
+bool Detector::readWeightFile(network *net, char *filename, int cutoff)
+{
+    fprintf(stderr, "Loading weights from %s...", filename);
+    fflush(stdout);
+    FILE *fp = fopen(filename, "rb");
+    if (!fp)
+        return false;
+
+    int major;
+    int minor;
+    int revision;
+    fread(&major, sizeof(int), 1, fp);
+    fread(&minor, sizeof(int), 1, fp);
+    fread(&revision, sizeof(int), 1, fp);
+    if ((major * 10 + minor) >= 2)
+    {
+        fread(net->seen, sizeof(uint64_t), 1, fp);
+    }
+    else
+    {
+        int iseen = 0;
+        fread(&iseen, sizeof(int), 1, fp);
+        *net->seen = iseen;
+    }
+    //int transpose = (major > 1000) || (minor > 1000);
+
+    int i;
+    for (i = 0; i < net->n && i < cutoff; ++i)
+    {
+        ILayer* pLayer = net->jjLayers[i];
+        if (pLayer->getLayer()->dontload)
+            continue;
+
+        if (pLayer->getLayer()->type == CONVOLUTIONAL)
+        {
+            load_convolutional_weights_cpu((ConvolutionLayer*)pLayer, fp);
+        }
+    }
+    fprintf(stderr, "Done!\n");
+    fclose(fp);
+    return true;
 }
 
 
@@ -495,25 +425,24 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         //options = s->options;
 
         // parse data into this layer and save to net
-        JJ::layer l;
+        //JJ::layer l;
+        JJ::ILayer* pLayer = nullptr;
         JJ::LAYER_TYPE lt = string_to_layer_type(sectionName.c_str());
 
         // [convolutional]
         if (lt == JJ::CONVOLUTIONAL)
         {
             //l = parse_convolutional(options, params);
-            ConvolutionLayer* pLayer = new ConvolutionLayer;
+            pLayer = new ConvolutionLayer;
             pLayer->load(&parser, sectionIndex, params);
-            l = pLayer->m_layerInfo;
         }
         //else if (lt == REGION) {
             //l = parse_region(options, params);
         //}
         else if (lt == YOLO) {
             //l = parse_yolo(options, params);
-            YoloLayer* pLayer = new YoloLayer;
+            pLayer = new YoloLayer;
             pLayer->load(&parser, sectionIndex, params);
-            l = pLayer->m_layerInfo;
         }
         //else if (lt == SOFTMAX) {
             //l = parse_softmax(options, params);
@@ -521,24 +450,21 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         //}
         else if (lt == MAXPOOL) {
             //l = parse_maxpool(options, params);
-            MaxpoolLayer* pLayer = new MaxpoolLayer;
+            pLayer = new MaxpoolLayer;
             pLayer->load(&parser, sectionIndex, params);
-            l = pLayer->m_layerInfo;
         }
         //else if (lt == REORG) {
             //l = parse_reorg(options, params);
         //}
         else if (lt == ROUTE) {
             //l = parse_route(options, params, net);
-            RouteLayer* pLayer = new RouteLayer;
+            pLayer = new RouteLayer;
             pLayer->load(&parser, sectionIndex, params);
-            l = pLayer->m_layerInfo;
         }
         else if (lt == UPSAMPLE) {
             //l = parse_upsample(options, params, net);
-            UpsampleLayer* pLayer = new UpsampleLayer;
+            pLayer = new UpsampleLayer;
             pLayer->load(&parser, sectionIndex, params);
-            l = pLayer->m_layerInfo;
         }
         //else if (lt == SHORTCUT) {
             //l = parse_shortcut(options, params, net);
@@ -547,24 +473,25 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
             fprintf(stderr, "Type not recognized: %s\n", sectionName.c_str());
         }
 
-        l.dontload = parser.ReadInteger(sectionIndex, "dontload", 0);
-        l.dontloadscales = parser.ReadInteger(sectionIndex, "dontloadscales", 0);
+        layer* pLayerInfo = pLayer->getLayer();
+        pLayerInfo->dontload = parser.ReadInteger(sectionIndex, "dontload", 0);
+        pLayerInfo->dontloadscales = parser.ReadInteger(sectionIndex, "dontloadscales", 0);
         //option_unused(options);
 
         // save this layer
-        pNetWork->layers.push_back(l);
-        if (l.workspace_size > workspace_size)
-            workspace_size = l.workspace_size;
+        pNetWork->jjLayers.push_back(pLayer);
+        if (pLayerInfo->workspace_size > workspace_size)
+            workspace_size = pLayerInfo->workspace_size;
 
         //free_section(s);
         //n = n->next;
         //++count;
         //if (n)
         {
-            params.h = l.out_h;
-            params.w = l.out_w;
-            params.c = l.out_c;
-            params.inputs = l.outputs;
+            params.h = pLayerInfo->out_h;
+            params.w = pLayerInfo->out_w;
+            params.c = pLayerInfo->out_c;
+            params.inputs = pLayerInfo->outputs;
         }
     }
 
@@ -702,9 +629,8 @@ void Detector::yolov2_forward_network_cpu(network net, network_state state)
     for (i = 0; i < net.n; ++i)
     {
         state.index = i;
-        layer l = net.layers[i];
         ILayer* pLayer = net.jjLayers[i];
-        pLayer->forward_layer_cpu(l, state);
+        //pLayer->forward_layer_cpu(pLayer->getLayer(), state);
 
         //state.input = l.output;
     }

@@ -32,8 +32,9 @@ public:
     void detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show);
 
 private:
-    void loadData(const char* cfgfile, const char* weightsfile);
     JJ::network* readConfigFile(const char* cfgFile, int batch, int quantized);
+    bool readWeightFile(network *net, char *filename, int cutoff);
+
     bool parseNetOptions(const IniParser* pIniParser, JJ::network* pNetWork);
     
 
@@ -51,9 +52,9 @@ private:
 
 
 
-    void yolov2_fuse_conv_batchnorm(network net);
+    void yolov2_fuse_conv_batchnorm(network* net);
 
-    void calculate_binary_weights(network net);
+    void calculate_binary_weights(network* net);
 
 
 

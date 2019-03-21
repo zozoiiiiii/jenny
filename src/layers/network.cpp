@@ -6,20 +6,26 @@ int NetWork::get_network_output_size(network* pNet)
 {
     int i;
     for (i = pNet->n - 1; i > 0; --i)
-    if (pNet->layers[i].type != COST)
-        break;
+    {
+        ILayer* pLayer = pNet->jjLayers[i];
+        if (pLayer->getLayer()->type != COST)
+            break;
+    }
 
-    return pNet->layers[i].outputs;
+    return pNet->jjLayers[i]->getLayer()->outputs;
 }
 
 std::vector<float> NetWork::get_network_output(network* pNet)
 {
     int i;
     for (i = pNet->n - 1; i > 0; --i)
-    if (pNet->layers[i].type != COST)
-        break;
+    {
+        ILayer* pLayer = pNet->jjLayers[i];
+        if (pLayer->getLayer()->type != COST)
+            break;
+    }
 
-    return pNet->layers[i].output;
+    return pNet->jjLayers[i]->getLayer()->output;
 }
 
 

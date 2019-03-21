@@ -32,13 +32,13 @@ struct network
     int batch;
     std::vector<float> input_calibration;
     //int input_calibration_size;
-    //uint64_t *seen;
+    uint64_t *seen;                 // weight file
     //float epoch;
     int subdivisions;
     float momentum;
     float decay;
     //layer *layers;
-    std::vector<layer> layers;
+    //std::vector<layer> layers;
     std::vector<ILayer*> jjLayers;
 
     int outputs;

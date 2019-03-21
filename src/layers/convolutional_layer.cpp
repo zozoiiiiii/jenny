@@ -144,7 +144,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.pad = padding;
     m_layerInfo.batch_normalize = batch_normalize;
 
-    m_layerInfo.weights.assign( c*n*size*size, 0.0f);
+    m_weight.weights = (float*)calloc(c*n*size*size, sizeof(float));
     m_layerInfo.weights_int8.assign( c*n*size*size, 0);
 
     m_layerInfo.biases.assign(n, 0.0f);
@@ -153,7 +153,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     // float scale = 1./sqrt(size*size*c);
     float scale = sqrt(2. / (size*size*c));
     for (i = 0; i < c*n*size*size; ++i)
-        m_layerInfo.weights[i] = scale * rand_uniform(-1, 1) ;
+        m_weight.weights[i] = scale * rand_uniform(-1, 1) ;
 
     int out_h = convolutional_out_height(m_layerInfo);
     int out_w = convolutional_out_width(m_layerInfo);
@@ -169,8 +169,8 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     if (binary)
     {
         m_layerInfo.binary_weights.assign (c*n*size*size, 0.0f);
-        m_layerInfo.cweights.assign( c*n*size*size, 0);
-        m_layerInfo.scales.assign(n, 0.0f);
+        m_layerInfo.cweights.assign(c*n*size*size, 0);
+        m_weight.scales = (float*)calloc(n, sizeof(float));
     }
 
     if (xnor)
@@ -187,11 +187,11 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
 
     if (batch_normalize)
     {
-        m_layerInfo.scales.assign(n, 0.0f);
+        m_weight.scales = (float*)calloc(n, sizeof(float));
         //m_layerInfo.scale_updates = calloc(n, sizeof(float));
         for (i = 0; i < n; ++i)
         {
-            m_layerInfo.scales[i] = 1;
+            m_weight.scales[i] = 1;
         }
 
         m_layerInfo.mean.assign(n, 0.0f);
@@ -200,8 +200,8 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
         //m_layerInfo.mean_delta = calloc(n, sizeof(float));
         //m_layerInfo.variance_delta = calloc(n, sizeof(float));
 
-        m_layerInfo.rolling_mean.assign(n, 0.0f);
-        m_layerInfo.rolling_variance.assign(n, 0.0f);
+        m_weight.rolling_mean = (float*)calloc(n, sizeof(float));
+        m_weight.rolling_variance = (float*)calloc(n, sizeof(float));
         m_layerInfo.x.assign(m_layerInfo.batch*m_layerInfo.outputs, 0.0f);
         m_layerInfo.x_norm.assign(m_layerInfo.batch*m_layerInfo.outputs, 0.0f);
     }

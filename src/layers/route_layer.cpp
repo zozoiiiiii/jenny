@@ -43,24 +43,24 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
             index = params.index + index;
 
         layers[i] = index;
-        sizes[i] = params.net->layers[index].outputs;
+        sizes[i] = params.net->jjLayers[index]->getLayer()->outputs;
     }
 
     int batch = params.batch;
 
     JJ::layer layer = make_route_layer(batch, nSize, layers, sizes);
 
-    JJ::layer first = params.net->layers[layers[0]];
-    layer.out_w = first.out_w;
-    layer.out_h = first.out_h;
-    layer.out_c = first.out_c;
+    JJ::layer* first = params.net->jjLayers[layers[0]]->getLayer();
+    layer.out_w = first->out_w;
+    layer.out_h = first->out_h;
+    layer.out_c = first->out_c;
     for (int i = 1; i < nSize; ++i)
     {
         int index = layers[i];
-        JJ::layer next = params.net->layers[index];
-        if (next.out_w == first.out_w && next.out_h == first.out_h)
+        JJ::layer* next = params.net->jjLayers[index]->getLayer();
+        if (next->out_w == first->out_w && next->out_h == first->out_h)
         {
-            layer.out_c += next.out_c;
+            layer.out_c += next->out_c;
         }
         else
         {

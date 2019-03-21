@@ -40,15 +40,28 @@ struct ConvolutionalLayerInfo
 };
 
 
+struct ConvolutionWeight
+{
+    float* biases;
+    float* scales;
+    float* rolling_mean;
+    float* rolling_variance;
+    float *weights;
+};
+
 typedef layer convolutional_layer;
 class ConvolutionLayer : public ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params);
+    ConvolutionWeight* getWeight() { return &m_weight; }
 
 private:
     layer make_convolutional_layer(int batch, int h, int w, int c, int n, int size, int stride, int padding, ACTIVATION activation,
         int batch_normalize, int binary, int xnor, int adam, int quantized, int use_bin_output);
+
+private:
+    ConvolutionWeight m_weight;
 };
 
 NS_JJ_END

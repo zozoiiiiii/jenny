@@ -201,18 +201,12 @@ struct layer
     int new_lda;
     int bit_align;
 
-    std::vector<float> biases;      // con, yolo layer
+    std::vector<float> biases;      // con, yolo layer, weight file
     std::vector<float> biases_quant;
     //float *bias_updates;
 
     int quantized;
 
-    std::vector<float> scales;
-    //float *scale_updates;
-
-    //float *weights;
-    std::vector<float> weights;
-    //int8_t * weights_int8;
     std::vector<int8_t> weights_int8;
 
 
@@ -224,12 +218,8 @@ struct layer
     float *col_image;
     std::vector<int> input_layers; // route
     std::vector<int> input_sizes; // route 
-    //float * delta;
-    //float * output;
     std::vector<float> output;  // con, yolo, maxpool, route, upsample
-    //float *output_multipler;
     float output_multipler;
-    //int8_t * output_int8;
     std::vector<int8_t> output_int8;    //con, maxpool , route
     float * squared;
     float * norms;
@@ -241,8 +231,6 @@ struct layer
     //float * mean_delta;
     //float * variance_delta;
 
-    std::vector<float> rolling_mean;
-    std::vector<float> rolling_variance;
 
     std::vector<float> x;
     std::vector<float> x_norm;
@@ -315,9 +303,9 @@ public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
     void forward_layer_cpu(layer l, network_state state) {}
 
+    layer* getLayer() { return &m_layerInfo; }
 
-
-
+protected:
     layer m_layerInfo;
 };
 
