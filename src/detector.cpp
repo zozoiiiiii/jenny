@@ -358,7 +358,7 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     ImageInfo **alphabet = NULL;
 
     // 1. read config file, like convolution layer
-    network net;// = parse_network_cfg(cfgfile, 1, quantized);    // parser.c
+    network net;// = readConfigFile(cfgfile, 1, quantized);    // parser.c
     if (weightfile)
     {
         // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer

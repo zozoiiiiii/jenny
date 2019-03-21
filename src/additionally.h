@@ -839,8 +839,6 @@ extern "C" {
     // detect on CPU: yolov2_forward_network.c
     float *network_predict_cpu(network net, float *input);
 
-    // calculate mAP
-    void validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float thresh_calc_avg_iou, int quantized, const float iou_thresh);
 
     // fuse convolutional and batch_norm weights into one convolutional-layer
     void yolov2_fuse_conv_batchnorm(network net);
@@ -865,8 +863,6 @@ extern "C" {
     // 8-bit Inference with TensorRT: http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     float entropy_calibration(float *src_arr, const size_t size, const float bin_width, const int max_bin);
 
-    // additionally.c
-    void validate_calibrate_valid(char *datacfg, char *cfgfile, char *weightfile, int input_calibration);
 
     // additionally.c
     detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter);
