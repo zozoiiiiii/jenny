@@ -47,18 +47,32 @@ struct ConvolutionWeight
     float* rolling_mean;
     float* rolling_variance;
     float *weights;
+
+    // tempory
+    float* binary_weights;
+    float *binary_input;
 };
+
+
+
+
+
 
 typedef layer convolutional_layer;
 class ConvolutionLayer : public ILayer
 {
 public:
+    static void activate_array(float *x, const int n, const ACTIVATION a);
+public:
     virtual bool load(const IniParser* pParser, int section, size_params params);
+    virtual void forward_layer_cpu(network_state state);
     ConvolutionWeight* getWeight() { return &m_weight; }
 
 private:
     layer make_convolutional_layer(int batch, int h, int w, int c, int n, int size, int stride, int padding, ACTIVATION activation,
         int batch_normalize, int binary, int xnor, int adam, int quantized, int use_bin_output);
+
+
 
 private:
     ConvolutionWeight m_weight;

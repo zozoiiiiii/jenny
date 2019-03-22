@@ -22,7 +22,7 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.outputs = l.out_w*l.out_h*l.out_c;
     l.inputs = l.w*l.h*l.c;
     //l.delta = calloc(l.outputs*batch, sizeof(float));
-    l.output.assign(l.outputs*batch, 0.0f);;
+    l.output = (float*)calloc(l.outputs*batch, sizeof(float));
 
     //l.forward = forward_upsample_layer;
     if (l.reverse)
@@ -56,5 +56,40 @@ void UpsampleLayer::backward_upsample_layer(const layer l, network net)
    
 }
 
+void fill_cpu(int N, float ALPHA, float *X, int INCX)
+{
+    int i;
+    for (i = 0; i < N; ++i) X[i*INCX] = ALPHA;
+}
 
+void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int forward, float scale, float *out)
+{
+    int i, j, k, b;
+    for (b = 0; b < batch; ++b) {
+        for (k = 0; k < c; ++k) {
+            for (j = 0; j < h*stride; ++j) {
+                for (i = 0; i < w*stride; ++i) {
+                    int in_index = b * w*h*c + k * w*h + (j / stride)*w + i / stride;
+                    int out_index = b * w*h*c*stride*stride + k * w*h*stride*stride + j * w*stride + i;
+                    if (forward) out[out_index] = scale * in[in_index];
+                    else in[in_index] += scale * out[out_index];
+                }
+            }
+        }
+    }
+}
+
+void UpsampleLayer::forward_layer_cpu(network_state state)
+{
+    layer& l = m_layerInfo;
+    fill_cpu(l.outputs*l.batch, 0, l.output, 1);
+    if (l.reverse)
+    {
+        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, l.scale, state.input);
+    }
+    else
+    {
+        upsample_cpu(state.input, l.w, l.h, l.c, l.batch, l.stride, 1, l.scale, l.output);
+    }
+}
 NS_JJ_END

@@ -20,7 +20,7 @@ layer make_route_layer(int batch, int n, std::vector<int> input_layers, std::vec
     fprintf(stderr, "\n");
     l.outputs = outputs;
     l.inputs = outputs;
-    l.output.assign(outputs*batch, 0.0f);
+    l.output = (float*)calloc(outputs*batch, sizeof(float));
     l.output_int8.assign(outputs*batch, 0);
     return l;
 }
@@ -73,4 +73,23 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
 
 
 
+void RouteLayer::forward_layer_cpu(network_state state)
+{
+    layer& l = m_layerInfo;
+
+    int i, j;
+    int offset = 0;
+    // number of merged layers
+    for (i = 0; i < l.n; ++i) {
+        int index = l.input_layers[i];                    // source layer index
+        ILayer* pLayer = state.net->jjLayers[index];
+        float *input = pLayer->getLayer()->output;    // source layer output ptr
+        int input_size = l.input_sizes[i];                // source layer size
+                                                        // batch index
+        for (j = 0; j < l.batch; ++j) {
+            memcpy(l.output + offset + j * l.outputs, input + j * input_size, input_size * sizeof(float));
+        }
+        offset += input_size;
+    }
+}
 NS_JJ_END

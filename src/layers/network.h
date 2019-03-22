@@ -26,7 +26,7 @@ enum learning_rate_policy
 struct network
 {
     int quantized;
-    std::vector<float> workspace;
+    float* workspace;
     int n;  // layer count
 
     int batch;
@@ -42,7 +42,7 @@ struct network
     std::vector<ILayer*> jjLayers;
 
     int outputs;
-    std::vector<float> output;
+    float* output;
     learning_rate_policy policy;
 
     float learning_rate;
@@ -83,6 +83,6 @@ class NetWork
 {
 public:
     static int get_network_output_size(network* pNet);
-    static std::vector<float> get_network_output(network* pNet);
+    static float* get_network_output(network* pNet);
 };
 NS_JJ_END

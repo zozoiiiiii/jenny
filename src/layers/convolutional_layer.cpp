@@ -20,6 +20,103 @@ static inline ACTIVATION get_activation(const std::string& s)
     return RELU;
 }
 
+
+static inline float stair_activate(float x)
+{
+    int n = floor(x);
+    if (n % 2 == 0) return floor(x / 2.);
+    else return (x - n) + floor(x / 2.);
+}
+static inline float hardtan_activate(float x)
+{
+    if (x < -1) return -1;
+    if (x > 1) return 1;
+    return x;
+}
+static inline float linear_activate(float x) { return x; }
+static inline float logistic_activate(float x) { return 1. / (1. + exp(-x)); }
+static inline float loggy_activate(float x) { return 2. / (1. + exp(-x)) - 1; }
+static inline float relu_activate(float x) { return x * (x > 0); }
+static inline float elu_activate(float x) { return (x >= 0)*x + (x < 0)*(exp(x) - 1); }
+static inline float relie_activate(float x) { return (x > 0) ? x : .01*x; }
+static inline float ramp_activate(float x) { return x * (x > 0) + .1*x; }
+static inline float leaky_activate(float x) { return (x > 0) ? x : .1*x; }
+static inline float tanh_activate(float x) { return (exp(2 * x) - 1) / (exp(2 * x) + 1); }
+static inline float plse_activate(float x)
+{
+    if (x < -4) return .01 * (x + 4);
+    if (x > 4)  return .01 * (x - 4) + 1;
+    return .125*x + .5;
+}
+
+static inline float lhtan_activate(float x)
+{
+    if (x < 0) return .001*x;
+    if (x > 1) return .001*(x - 1) + 1;
+    return x;
+}
+
+static inline ACTIVATION get_activation(char *s)
+{
+    if (strcmp(s, "logistic") == 0) return LOGISTIC;
+    if (strcmp(s, "loggy") == 0) return LOGGY;
+    if (strcmp(s, "relu") == 0) return RELU;
+    if (strcmp(s, "elu") == 0) return ELU;
+    if (strcmp(s, "relie") == 0) return RELIE;
+    if (strcmp(s, "plse") == 0) return PLSE;
+    if (strcmp(s, "hardtan") == 0) return HARDTAN;
+    if (strcmp(s, "lhtan") == 0) return LHTAN;
+    if (strcmp(s, "linear") == 0) return LINEAR;
+    if (strcmp(s, "ramp") == 0) return RAMP;
+    if (strcmp(s, "leaky") == 0) return LEAKY;
+    if (strcmp(s, "tanh") == 0) return TANH;
+    if (strcmp(s, "stair") == 0) return STAIR;
+    fprintf(stderr, "Couldn't find activation function %s, going with ReLU\n", s);
+    return RELU;
+}
+
+static float activate(float x, ACTIVATION a)
+{
+    switch (a) {
+    case LINEAR:
+        return linear_activate(x);
+    case LOGISTIC:
+        return logistic_activate(x);
+    case LOGGY:
+        return loggy_activate(x);
+    case RELU:
+        return relu_activate(x);
+    case ELU:
+        return elu_activate(x);
+    case RELIE:
+        return relie_activate(x);
+    case RAMP:
+        return ramp_activate(x);
+    case LEAKY:
+        return leaky_activate(x);
+    case TANH:
+        return tanh_activate(x);
+    case PLSE:
+        return plse_activate(x);
+    case STAIR:
+        return stair_activate(x);
+    case HARDTAN:
+        return hardtan_activate(x);
+    case LHTAN:
+        return lhtan_activate(x);
+    }
+    return 0;
+}
+
+void ConvolutionLayer::activate_array(float *x, const int n, const ACTIVATION a)
+{
+    int i;
+    for (i = 0; i < n; ++i) {
+        x[i] = activate(x[i], a);
+    }
+}
+
+
 bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params params)
 {
     int n = pParser->ReadInteger(section, "filters", 1);
@@ -163,20 +260,20 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.outputs = m_layerInfo.out_h * m_layerInfo.out_w * m_layerInfo.out_c;
     m_layerInfo.inputs = m_layerInfo.w * m_layerInfo.h * m_layerInfo.c;
 
-    m_layerInfo.output.assign(m_layerInfo.batch * m_layerInfo.outputs, 0.0f);
+    m_layerInfo.output = (float*)calloc(m_layerInfo.batch * m_layerInfo.outputs, sizeof(float));
     m_layerInfo.output_int8.assign(m_layerInfo.batch * m_layerInfo.outputs, 0);
 
     if (binary)
     {
-        m_layerInfo.binary_weights.assign (c*n*size*size, 0.0f);
+        m_weight.binary_weights = (float*)calloc (c*n*size*size, sizeof(float));
         m_layerInfo.cweights.assign(c*n*size*size, 0);
         m_weight.scales = (float*)calloc(n, sizeof(float));
     }
 
     if (xnor)
     {
-        m_layerInfo.binary_weights.assign(c*n*size*size, 0.0f);
-        m_layerInfo.binary_input.assign(m_layerInfo.inputs*m_layerInfo.batch, 0.0f);
+        m_weight.binary_weights = (float*)calloc(c*n*size*size, sizeof(float));
+        m_weight.binary_input = (float*)calloc(m_layerInfo.inputs*m_layerInfo.batch, sizeof(float));
 
         int align = 32;// 8;
         int src_align = m_layerInfo.out_h*m_layerInfo.out_w;
@@ -226,4 +323,121 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
 }
 
 
+
+
+
+
+
+
+
+//////////////////////////////////forward//////////////////////////////////////////
+void binarize_weights(float *weights, int n, int size, float *binary)
+{
+    int i, f;
+    for (f = 0; f < n; ++f) {
+        float mean = 0;
+        for (i = 0; i < size; ++i) {
+            mean += fabs(weights[f*size + i]);
+        }
+        mean = mean / size;
+        for (i = 0; i < size; ++i) {
+            binary[f*size + i] = (weights[f*size + i] > 0) ? mean : -mean;
+        }
+    }
+}
+
+void binarize_cpu(float *input, int n, float *binary)
+{
+    int i;
+    for (i = 0; i < n; ++i) {
+        binary[i] = (input[i] > 0) ? 1 : -1;
+    }
+}
+
+void activate_array_cpu_custom(float* x, const int n, const ACTIVATION a)
+{
+    int i = 0;
+    if (a == LINEAR) {}
+    else {
+        for (i = 0; i < n; ++i) {
+            x[i] = activate(x[i], a);
+        }
+    }
+}
+
+void ConvolutionLayer::forward_layer_cpu(network_state state)
+{
+    layer& l = m_layerInfo;
+    int out_h = (l.h + 2 * l.pad - l.size) / l.stride + 1;    // output_height=input_height for stride=1 and pad=1
+    int out_w = (l.w + 2 * l.pad - l.size) / l.stride + 1;    // output_width=input_width for stride=1 and pad=1
+    int i, f, j;
+
+    // fill zero (ALPHA)
+    for (i = 0; i < l.outputs*l.batch; ++i)
+        l.output[i] = 0;
+
+    if (l.xnor)
+    {
+        if (!l.align_bit_weights)
+        {
+            binarize_weights(m_weight.weights, l.n, l.c*l.size*l.size, m_weight.binary_weights);
+            //printf("\n binarize_weights l.align_bit_weights = %p \n", l.align_bit_weights);
+        }
+        binarize_cpu(state.input, l.c*l.h*l.w*l.batch, m_weight.binary_input);
+
+        m_weight.weights = m_weight.binary_weights;
+        state.input = m_weight.binary_input;
+    }
+
+    // l.n - number of filters on this layer
+    // l.c - channels of input-array
+    // l.h - height of input-array
+    // l.w - width of input-array
+    // l.size - width and height of filters (the same size for all filters)
+
+
+    // 1. Convolution !!!
+
+    int const out_size = out_h * out_w;
+
+    // 2. Batch normalization
+    if (l.batch_normalize) {
+        int b;
+        for (b = 0; b < l.batch; b++) {
+            for (f = 0; f < l.out_c; ++f) {
+                for (i = 0; i < out_size; ++i) {
+                    int index = f * out_size + i;
+                    l.output[index + b * l.outputs] = (l.output[index + b * l.outputs] - m_weight.rolling_mean[f]) / (sqrtf(m_weight.rolling_variance[f]) + .000001f);
+                }
+            }
+
+            // scale_bias
+            for (i = 0; i < l.out_c; ++i) {
+                for (j = 0; j < out_size; ++j) {
+                    l.output[i*out_size + j + b * l.outputs] *= m_weight.scales[i];
+                }
+            }
+        }
+    }
+
+    // 3. Add BIAS
+    //if (l.batch_normalize)
+    {
+        int b;
+        for (b = 0; b < l.batch; b++)
+        for (i = 0; i < l.n; ++i)
+        for (j = 0; j < out_size; ++j)
+             l.output[i*out_size + j + b * l.outputs] += m_weight.biases[i];
+    }
+
+    // 4. Activation function (LEAKY or LINEAR)
+    //if (l.activation == LEAKY) {
+    //    for (i = 0; i < l.n*out_size; ++i) {
+    //        l.output[i] = leaky_activate(l.output[i]);
+    //    }
+    //}
+    //activate_array_cpu_custom(l.output, l.n*out_size, l.activation);
+    activate_array_cpu_custom(l.output, l.outputs*l.batch, l.activation);
+
+}
 NS_JJ_END

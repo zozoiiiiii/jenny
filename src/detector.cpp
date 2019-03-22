@@ -325,10 +325,9 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
 
         float *X = sized.data;
         time = clock();
-        //network_predict(net, X);
 
         // 4. predict, the key
-        //network_predict_cpu(net, X);
+        network_predict_cpu(net, X);
 
         printf("%s: Predicted in %f seconds.\n", input, (float)(clock() - time) / CLOCKS_PER_SEC); //sec(clock() - time));
         //get_region_boxes_cpu(l, 1, 1, thresh, probs, boxes, 0, 0);            // get_region_boxes(): region_layer.c
@@ -340,7 +339,7 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         if (nms)
             do_nms_sort(dets, nboxes, l->classes, nms);
 
-        //draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
+        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l->classes, ext_output);
         ImageUtil::save_image_png(im, "predictions");    // image.c
         ImageUtil::free_image(im);                    // image.c
         ImageUtil::free_image(sized);                // image.c
@@ -353,29 +352,81 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
 void Detector::fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter)
 {
     int j;
-//     for (j = 0; j < net->n; ++j)
-//     {
-//         layer l = net->layers[j];
-//         if (l.type == YOLO)
-//         {
-//             int count = get_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
-//             dets += count;
-//         }
-// 
-//         if (l.type == REGION)
-//         {
-//             custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
-//             dets += l.w*l.h*l.n;
-//         }
-//     }
+    for (j = 0; j < net->n; ++j)
+    {
+        ILayer* pLayer = net->jjLayers[j];
+        layer* l = pLayer->getLayer();
+        if (l->type == YOLO)
+        {
+            YoloLayer* pYoloLayer = (YoloLayer*)pLayer;
+            int count = pYoloLayer->get_yolo_detections(w, h, net->w, net->h, thresh, map, relative, dets, letter);
+            dets += count;
+        }
+    }
+}
+
+int yolo_num_detections(ILayer* pLayer, float thresh)
+{
+    layer* pLayerInfo = pLayer->getLayer();
+
+    int i, n;
+    int count = 0;
+    for (i = 0; i < pLayerInfo->w* pLayerInfo->h; ++i)
+    {
+        for (n = 0; n < pLayerInfo->n; ++n)
+        {
+            int obj_index =  pLayer->entry_index(0, n* pLayerInfo->w* pLayerInfo->h + i, 4);
+            if (pLayerInfo->output[obj_index] > thresh) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+int num_detections(network *net, float thresh)
+{
+    int i;
+    int s = 0;
+    for (i = 0; i < net->n; ++i)
+    {
+        ILayer* pLayer = net->jjLayers[i];
+        layer* pLayerInfo = pLayer->getLayer();
+        if (pLayerInfo->type == YOLO)
+        {
+            s += yolo_num_detections(pLayer, thresh);
+        }
+
+        if (pLayerInfo->type == DETECTION || pLayerInfo->type == REGION) {
+            s += pLayerInfo->w * pLayerInfo->h * pLayerInfo->n;
+        }
+    }
+    return s;
+}
+
+detection *make_network_boxes(network *net, float thresh, int *num)
+{
+    ILayer* pLayer = net->jjLayers[net->n - 1];
+    layer* pLayerInfo = pLayer->getLayer();
+    int i;
+    int nboxes = num_detections(net, thresh);
+    if (num) *num = nboxes;
+    detection *dets = (detection*)calloc(nboxes, sizeof(detection));
+    for (i = 0; i < nboxes; ++i)
+    {
+        dets[i].prob = (float*)calloc(pLayerInfo->classes, sizeof(float));
+        if (pLayerInfo->coords > 4) {
+            dets[i].mask = (float*)calloc(pLayerInfo->coords - 4, sizeof(float));
+        }
+    }
+    return dets;
 }
 
 detection * Detector::get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter)
 {
-//     detection *dets = make_network_boxes(net, thresh, num);
-//     fill_network_boxes(net, w, h, thresh, hier, map, relative, dets, letter);
-//     return dets;
-    return nullptr;
+    detection *dets = make_network_boxes(net, thresh, num);
+    fill_network_boxes(net, w, h, thresh, hier, map, relative, dets, letter);
+    return dets;
 }
 
 
@@ -562,7 +613,7 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
     if (workspace_size)
     {
         //printf("%ld\n", workspace_size);
-        pNetWork->workspace.assign(workspace_size, 0.0f);
+        pNetWork->workspace = (float*)calloc(workspace_size, sizeof(float));
     }
     return pNetWork;
 }
@@ -682,40 +733,35 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 
 
 
-void Detector::yolov2_forward_network_cpu(network net, network_state state)
+void Detector::yolov2_forward_network_cpu(network* net, network_state state)
 {
-    //state.workspace = net.workspace;
+    state.workspace = net->workspace;
     int i;
-    for (i = 0; i < net.n; ++i)
+    for (i = 0; i < net->n; ++i)
     {
         state.index = i;
-        ILayer* pLayer = net.jjLayers[i];
-        //pLayer->forward_layer_cpu(pLayer->getLayer(), state);
+        ILayer* pLayer = net->jjLayers[i];
+        pLayer->forward_layer_cpu(state);
 
-        //state.input = l.output;
+        state.input = pLayer->getLayer()->output;
     }
 }
 
 
 // detect on CPU
-float * Detector::network_predict_cpu(network net, float *input)
+float * Detector::network_predict_cpu(network* net, float *input)
 {
-    return nullptr;
-// 
-//     network_state state;
-//     state.net = net;
-//     state.index = 0;
-//     state.input = input;
-//     state.truth = 0;
-//     state.train = 0;
-//     state.delta = 0;
-//     yolov2_forward_network_cpu(net, state);    // network on CPU
-//                                             //float *out = get_network_output(net);
-// 
-//     // updated by junliang, begin, do not care about return 
-//     int i;
-//     for (i = net.n - 1; i > 0; --i) if (net.layers[i].type != COST) break;
-//     return net.layers[i].output;
+     network_state state;
+     state.net = net;
+     state.index = 0;
+     state.input = input;
+     state.truth = 0;
+     state.train = 0;
+     state.delta = 0;
+     yolov2_forward_network_cpu(net, state);    // network on CPU
+                                             //float *out = get_network_output(net);
+
+     return 0;
 }
 
 NS_JJ_END

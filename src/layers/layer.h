@@ -173,7 +173,7 @@ struct layer
     float probability;
     float scale;
 
-    std::vector<int> indexes; // maxpoll layer
+    int* indexes; // maxpoll layer
     float *rand;
     std::vector<float> cost;    // yolo layer
     std::vector<char> cweights;
@@ -186,7 +186,7 @@ struct layer
     float *concat;
     float *concat_delta;
 
-    std::vector<float> binary_weights;
+    //std::vector<float> binary_weights;
 
     char *align_bit_weights_gpu;
     float *mean_arr_gpu;
@@ -218,7 +218,7 @@ struct layer
     float *col_image;
     std::vector<int> input_layers; // route
     std::vector<int> input_sizes; // route 
-    std::vector<float> output;  // con, yolo, maxpool, route, upsample
+    float* output;  // con, yolo, maxpool, route, upsample
     float output_multipler;
     std::vector<int8_t> output_int8;    //con, maxpool , route
     float * squared;
@@ -259,7 +259,7 @@ struct layer
     float *r_cpu;
     float *h_cpu;
 
-    std::vector<float> binary_input;
+    //std::vector<float> binary_input;
 
     size_t workspace_size;
 };
@@ -301,10 +301,11 @@ class ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
-    void forward_layer_cpu(layer l, network_state state) {}
+    virtual void forward_layer_cpu(network_state state) {}
 
     layer* getLayer() { return &m_layerInfo; }
 
+    int entry_index(int batch, int location, int entry);
 protected:
     layer m_layerInfo;
 };

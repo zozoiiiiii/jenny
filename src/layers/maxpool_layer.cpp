@@ -18,8 +18,8 @@ layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, i
     l.size = size;
     l.stride = stride;
     int output_size = l.out_h * l.out_w * l.out_c * batch;
-    l.indexes.assign(output_size, 0);
-    l.output.assign(output_size, 0.0f);
+    l.indexes = (int*)calloc(output_size, sizeof(int));
+    l.output = (float*)calloc(output_size, sizeof(float));
     l.output_int8.assign(output_size, 0);
     //l.delta = calloc(output_size, sizeof(float));
     // commented only for this custom version of Yolo v2
@@ -47,4 +47,92 @@ bool MaxpoolLayer::load(const IniParser* pParser, int section, size_params param
     return true;
 }
 
+
+
+void forward_maxpool_layer_avx(float *src, float *dst, int* indexes, int size, int w, int h, int out_w, int out_h, int c,
+    int pad, int stride, int batch)
+{
+    int b, k;
+    const int w_offset = -pad / 2;
+    const int h_offset = -pad / 2;
+
+    for (b = 0; b < batch; ++b) {
+#pragma omp parallel for
+        for (k = 0; k < c; ++k) {
+            int i, j, m, n;
+            for (i = 0; i < out_h; ++i) {
+                for (j = 0; j < out_w; ++j) {
+                    int out_index = j + out_w * (i + out_h * (k + c * b));
+                    float max = -FLT_MAX;
+                    int max_i = -1;
+                    for (n = 0; n < size; ++n) {
+                        for (m = 0; m < size; ++m) {
+                            int cur_h = h_offset + i * stride + n;
+                            int cur_w = w_offset + j * stride + m;
+                            int index = cur_w + w * (cur_h + h * (k + b * c));
+                            int valid = (cur_h >= 0 && cur_h < h &&
+                                cur_w >= 0 && cur_w < w);
+                            float val = (valid != 0) ? src[index] : -FLT_MAX;
+                            max_i = (val > max) ? index : max_i;
+                            max = (val > max) ? val : max;
+                        }
+                    }
+                    dst[out_index] = max;
+                    indexes[out_index] = max_i;
+                }
+            }
+        }
+    }
+}
+
+void MaxpoolLayer::forward_layer_cpu(network_state state)
+{
+    layer& l = m_layerInfo;
+
+    if (!state.train)
+    {
+        forward_maxpool_layer_avx(state.input, l.output, l.indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
+        return;
+    }
+
+    int b, i, j, k, m, n;
+    const int w_offset = -l.pad;
+    const int h_offset = -l.pad;
+
+    const int h = l.out_h;
+    const int w = l.out_w;
+    const int c = l.c;
+
+    // batch index
+    for (b = 0; b < l.batch; ++b) {
+        // channel index
+        for (k = 0; k < c; ++k) {
+            // y - input
+            for (i = 0; i < h; ++i) {
+                // x - input
+                for (j = 0; j < w; ++j) {
+                    int out_index = j + w * (i + h * (k + c * b));
+                    float max = -FLT_MAX;
+                    int max_i = -1;
+                    // pooling x-index
+                    for (n = 0; n < l.size; ++n) {
+                        // pooling y-index
+                        for (m = 0; m < l.size; ++m) {
+                            int cur_h = h_offset + i * l.stride + n;
+                            int cur_w = w_offset + j * l.stride + m;
+                            int index = cur_w + l.w*(cur_h + l.h*(k + b * l.c));
+                            int valid = (cur_h >= 0 && cur_h < l.h &&
+                                cur_w >= 0 && cur_w < l.w);
+                            float val = (valid != 0) ? state.input[index] : -FLT_MAX;
+                            max_i = (val > max) ? index : max_i;    // get max index
+                            max = (val > max) ? val : max;            // get max value
+                        }
+                    }
+                    l.output[out_index] = max;        // store max value
+                    l.indexes[out_index] = max_i;    // store max index
+                }
+            }
+        }
+    }
+}
 NS_JJ_END
