@@ -43,8 +43,7 @@ bool MaxpoolLayer::load(const IniParser* pParser, int section, size_params param
     if (!(h && w && c))
         return false;// error("Layer before maxpool layer must output image.");
 
-    layer l = make_maxpool_layer(batch, h, w, c, size, stride, padding);
-    //return layer;
+    m_layerInfo = make_maxpool_layer(batch, h, w, c, size, stride, padding);
     return true;
 }
 

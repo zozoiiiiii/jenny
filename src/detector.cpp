@@ -384,10 +384,14 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
 
 JJ::network* Detector::readConfigFile(const char* filename, int batch, int quantized)
 {
-    IniParser parser(filename);
+    IniParser parser;
+    if (!parser.LoadFromFile(filename))
+        return nullptr;
     
     JJ::network* pNetWork = new JJ::network;
     pNetWork->n = parser.GetSectionCount() - 1; //  layer count
+    pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
+
     pNetWork->quantized = quantized;
     pNetWork->do_input_calibration = 0;
     
@@ -434,7 +438,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         {
             //l = parse_convolutional(options, params);
             pLayer = new ConvolutionLayer;
-            pLayer->load(&parser, sectionIndex, params);
         }
         //else if (lt == REGION) {
             //l = parse_region(options, params);
@@ -442,7 +445,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         else if (lt == YOLO) {
             //l = parse_yolo(options, params);
             pLayer = new YoloLayer;
-            pLayer->load(&parser, sectionIndex, params);
         }
         //else if (lt == SOFTMAX) {
             //l = parse_softmax(options, params);
@@ -451,7 +453,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         else if (lt == MAXPOOL) {
             //l = parse_maxpool(options, params);
             pLayer = new MaxpoolLayer;
-            pLayer->load(&parser, sectionIndex, params);
         }
         //else if (lt == REORG) {
             //l = parse_reorg(options, params);
@@ -459,19 +460,21 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         else if (lt == ROUTE) {
             //l = parse_route(options, params, net);
             pLayer = new RouteLayer;
-            pLayer->load(&parser, sectionIndex, params);
         }
         else if (lt == UPSAMPLE) {
             //l = parse_upsample(options, params, net);
             pLayer = new UpsampleLayer;
-            pLayer->load(&parser, sectionIndex, params);
         }
         //else if (lt == SHORTCUT) {
             //l = parse_shortcut(options, params, net);
         //}
         else {
             fprintf(stderr, "Type not recognized: %s\n", sectionName.c_str());
+            return nullptr;
         }
+
+        if (!pLayer->load(&parser, sectionIndex, params))
+            return nullptr;
 
         layer* pLayerInfo = pLayer->getLayer();
         pLayerInfo->dontload = parser.ReadInteger(sectionIndex, "dontload", 0);
@@ -551,7 +554,7 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
     net->batch *= net->time_steps;
     net->subdivisions = subdivs;
 
-    std::string input_calibration= pIniParser->ReadString(netSectionIndex, "input_calibration", 0);
+    std::string input_calibration= pIniParser->ReadString(netSectionIndex, "input_calibration", "0");
     if (!input_calibration.empty())
     {
         StringUtil::splitFloat(net->input_calibration, input_calibration, ",");

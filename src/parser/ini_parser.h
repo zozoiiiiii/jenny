@@ -23,8 +23,8 @@ class IniParser
         std::map<std::string, std::string> values;
     };
 public:
-    IniParser(const std::string& cfgfile);
     ~IniParser();
+    bool LoadFromFile(const std::string& cfgfile);
 
     // section
     int GetSectionCount() const;
@@ -39,9 +39,8 @@ public:
     float ReadFloat(size_t sect_index, const std::string& key, float def=0.0f) const;
 
 private:
-    std::string readLine(FILE *fp);
+    bool readLine(FILE *fp, std::string& line);
     std::string strip(const std::string& str);
-    bool LoadFromFile();
 private:
     std::string m_strFileName;
     std::vector<IniSection*> m_sections;

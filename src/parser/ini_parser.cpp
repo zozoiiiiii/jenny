@@ -3,10 +3,6 @@
 #include <assert.h>
 
 
-
-IniParser::IniParser(const std::string& filename)  : m_strFileName(filename)
-{}
-
 IniParser::~IniParser()
 {
     for (size_t i = 0; i < m_sections.size(); i++)
@@ -17,17 +13,16 @@ IniParser::~IniParser()
 }
 
 
-std::string IniParser::readLine(FILE *fp)
+bool IniParser::readLine(FILE *fp, std::string& lineStr)
 {
     if (feof(fp))
         return 0;
 
-    char line[512] = { 0 };
+    char line[1024] = { 0 };    // one line max length limit
     int nSize = sizeof(line) / sizeof(char);
     if (!fgets(line, nSize, fp))
     {
-        free(line);
-        return "";
+        return false;
     }
 
     // get one line
@@ -35,39 +30,16 @@ std::string IniParser::readLine(FILE *fp)
     if (line[curr - 1] == '\n')
     {
         line[curr - 1] = '\0';
-        return line;
+        lineStr = line;
+        return true;
     }
 
-    // it's a real long line
-    char* pLongLine = nullptr;
-    while ((line[curr - 1] != '\n') && !feof(fp))
-    {
-        if (pLongLine)
-            free(pLongLine);
-
-        if (curr == nSize - 1)
-        {
-            nSize *= 2;
-            pLongLine = (char*)malloc(nSize * sizeof(char));
-            if (!line)
-            {
-                return 0;
-            }
-        }
-
-        fgets(pLongLine, nSize, fp);
-        curr = strlen(line);
-    }
-
-    if (line[curr - 1] == '\n')
-        line[curr - 1] = '\0';
-
-    return line;
+    return false;
 }
 
 std::string IniParser::strip(const std::string& str)
 {
-    char* buf = (char*)malloc(str.length());
+    char* buf = (char*)malloc(str.length()+1);
     strcpy(buf, str.c_str());
     
     size_t i;
@@ -88,8 +60,9 @@ std::string IniParser::strip(const std::string& str)
     return result;
 }
 
-bool IniParser::LoadFromFile()
+bool IniParser::LoadFromFile(const std::string& fileName)
 {
+    m_strFileName = fileName;
     FILE *file = fopen(m_strFileName.c_str(), "r");
     if (file == 0)
         return false;
@@ -97,11 +70,14 @@ bool IniParser::LoadFromFile()
     IniSection* pSection = nullptr;
     while (true)
     {
-        std::string line = readLine(file);
-        if (line.empty())
+        std::string line;
+        if (!readLine(file, line))
             break;
 
         line = strip(line);
+        if(line.empty())
+            continue;
+
         char firstChar = line.at(0);
         switch (firstChar)
         {

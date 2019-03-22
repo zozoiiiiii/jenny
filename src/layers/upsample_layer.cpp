@@ -35,8 +35,8 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
 bool UpsampleLayer::load(const IniParser* pParser, int section, size_params params)
 {
     int stride = pParser->ReadInteger(section, "stride", 2);
-    layer l = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
-    l.scale = pParser->ReadFloat(section, "scale", 1);
+    m_layerInfo = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
+    m_layerInfo.scale = pParser->ReadFloat(section, "scale", 1);
     //return layer;
     return true;
 }

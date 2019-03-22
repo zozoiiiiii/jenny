@@ -47,6 +47,26 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int
     return l;
 }
 
+int *parse_yolo_mask(char *a, int *num)
+{
+    int *mask = 0;
+    if (a) {
+        int len = strlen(a);
+        int n = 1;
+        int i;
+        for (i = 0; i < len; ++i) {
+            if (a[i] == ',') ++n;
+        }
+        mask = (int*)calloc(n, sizeof(int));
+        for (i = 0; i < n; ++i) {
+            int val = atoi(a);
+            mask[i] = val;
+            a = strchr(a, ',') + 1;
+        }
+        *num = n;
+    }
+    return mask;
+}
 
 bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
 {
@@ -54,36 +74,38 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
     int total = pParser->ReadInteger(section, "num", 1);
     int num = total;
 
-    std::string a = pParser->ReadString(section, "mask", 0);
+    std::string a = pParser->ReadString(section, "mask");
     std::vector<int> mask;
     StringUtil::splitInt(mask, a, ",");
+    num = mask.size();
+
     int max_boxes = pParser->ReadInteger(section, "max", 90);
-    layer l = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
-    if (l.outputs != params.inputs)
+    m_layerInfo = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
+    if (m_layerInfo.outputs != params.inputs)
     {
-        printf("Error: l.outputs == params.inputs \n");
+        printf("Error: layer.outputs == params.inputs \n");
         printf("filters= in the [convolutional]-layer doesn't correspond to classes= or mask= in [yolo]-layer \n");
         return false;
     }
 
-    //assert(l.outputs == params.inputs);
-    std::string map_file = pParser->ReadString(section, "map", 0);
+    //assert(m_layerInfo.outputs == params.inputs);
+    std::string map_file = pParser->ReadString(section, "map");
     if (!map_file.empty())
     {
-      //  l.map = read_map(map_file);
+      //  m_layerInfo.map = read_map(map_file);
     }
 
-    l.jitter = pParser->ReadFloat(section, "jitter", .2);
-    l.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
+    m_layerInfo.jitter = pParser->ReadFloat(section, "jitter", .2);
+    m_layerInfo.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
 
-    l.ignore_thresh = pParser->ReadFloat(section, "ignore_thresh", .5);
-    l.truth_thresh = pParser->ReadFloat(section, "truth_thresh", 1);
-    l.random = pParser->ReadInteger(section, "random", 0);
+    m_layerInfo.ignore_thresh = pParser->ReadFloat(section, "ignore_thresh", .5);
+    m_layerInfo.truth_thresh = pParser->ReadFloat(section, "truth_thresh", 1);
+    m_layerInfo.random = pParser->ReadInteger(section, "random", 0);
 
-    a = pParser->ReadString(section, "anchors", 0);
+    a = pParser->ReadString(section, "anchors");
     std::vector<float> bias;
     StringUtil::splitFloat(bias, a, ",");
-    l.biases = bias;
+    m_layerInfo.biases = bias;
 
     //return l;
     return true;

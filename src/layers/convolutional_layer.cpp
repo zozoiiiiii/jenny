@@ -147,7 +147,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_weight.weights = (float*)calloc(c*n*size*size, sizeof(float));
     m_layerInfo.weights_int8.assign( c*n*size*size, 0);
 
-    m_layerInfo.biases.assign(n, 0.0f);
+    m_weight.biases = (float*)calloc(n, sizeof(float));
     m_layerInfo.biases_quant.assign(n, 0.0f);
 
     // float scale = 1./sqrt(size*size*c);
