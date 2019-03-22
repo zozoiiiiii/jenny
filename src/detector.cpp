@@ -142,13 +142,70 @@ void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float 
 // fuse convolutional and batch_norm weights into one convolutional-layer
 void Detector::yolov2_fuse_conv_batchnorm(network* net)
 {
-  
+    int j;
+
+    // visit all layers
+    for (j = 0; j < net->n; ++j)
+    {
+        ILayer* pLayer = net->jjLayers[j];
+        layer *l = pLayer->getLayer();
+        if (l->type == CONVOLUTIONAL)
+        {
+            printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
+
+            if (l->batch_normalize)
+            {
+                int f;
+                for (f = 0; f < l->n; ++f)
+                {
+                    ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
+                    ConvolutionWeight* pWeight = pConvLayer->getWeight();
+                    pWeight->biases[f] = pWeight->biases[f] - pWeight->scales[f] * pWeight->rolling_mean[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
+
+                    const size_t filter_size = l->size*l->size*l->c;
+                    int i;
+                    for (i = 0; i < filter_size; ++i)
+                    {
+                        int w_index = f * filter_size + i;
+
+                        pWeight->weights[w_index] = pWeight->weights[w_index] * pWeight->scales[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
+                    }
+                }
+
+                l->batch_normalize = 0;
+            }
+        }
+        else {
+            printf(" Skip layer: %d \n", l->type);
+        }
+    }  
 }
 
 void Detector::calculate_binary_weights(network* net)
 {
-   
+    int j;
+    for (j = 0; j < net->n; ++j)
+    {
+        ILayer* pLayer = net->jjLayers[j];
+        layer *l = pLayer->getLayer();
+        if (l->type == CONVOLUTIONAL)
+        {
+            //printf(" Merges Convolutional-%d and batch_norm \n", j);
 
+            if (l->xnor)
+            {
+                //printf("\n %d \n", j);
+                l->lda_align = 256; // 256bit for AVX2
+
+                binary_align_weights(l);
+
+                if (l->use_bin_output)
+                {
+                    l->activation = LINEAR;
+                }
+            }
+        }
+    }
 }
 
 void binarize_weights(std::vector<float> weights, int n, int size, std::vector<float>& binary)
@@ -532,12 +589,12 @@ JJ::LAYER_TYPE Detector::string_to_layer_type(const std::string& type)
     if (type == "region") return JJ::REGION;
     if (type ==  "conv" || type == "convolutional") return JJ::CONVOLUTIONAL;
     if (type == "net"  || type == "network") return JJ::NETWORK;
-    if (type, "max"|| type == "maxpool") return JJ::MAXPOOL;
-    if (type, "reorg") return JJ::REORG;
-    if (type, "upsample") return JJ::UPSAMPLE;
-    if (type, "shortcut") return JJ::SHORTCUT;
-    if (type, "soft" || type == "softmax") return JJ::SOFTMAX;
-    if (type, "route") return JJ::ROUTE;
+    if (type == "max"|| type == "maxpool") return JJ::MAXPOOL;
+    if (type == "reorg") return JJ::REORG;
+    if (type == "upsample") return JJ::UPSAMPLE;
+    if (type == "shortcut") return JJ::SHORTCUT;
+    if (type == "soft" || type == "softmax") return JJ::SOFTMAX;
+    if (type == "route") return JJ::ROUTE;
     return JJ::BLANK;
 }
 

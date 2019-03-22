@@ -5,7 +5,7 @@ NS_JJ_BEGIN
 layer make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes)
 {
     fprintf(stderr, "route ");
-    layer l;// = { 0 };
+    layer l = { 0 };
     l.type = ROUTE;
     l.batch = batch;
     l.n = n;
