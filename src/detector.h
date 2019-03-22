@@ -45,8 +45,6 @@ private:
 
     detection_with_class* get_actual_detections(detection *dets, int dets_num, float thresh, int* selected_detections_num);
 
-    // get prediction boxes: yolov2_forward_network.c
-    void get_region_boxes_cpu(layer l, int w, int h, float thresh, float **probs, box *boxes, int only_objectness, int *map);
 
     void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
 
@@ -66,7 +64,6 @@ private:
     detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter);
 
 
-    void binary_align_weights(layer *l);
 
 private:
     JJ::network* m_pNet;

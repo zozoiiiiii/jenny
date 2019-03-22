@@ -24,18 +24,6 @@
 NS_JJ_BEGIN
 
 class network;
-struct tree
-{
-    int *leaf;
-    int n;
-    int *parent;
-    int *group;
-    char **name;
-
-    int groups;
-    int *group_size;
-    int *group_offset;
-};
 
 
 typedef enum {
@@ -147,7 +135,6 @@ struct layer
     std::vector<float> m;
     std::vector<float> v;
 
-    tree *softmax_tree;
     int  *map;
 
     float alpha;
@@ -195,19 +182,19 @@ struct layer
     int align_workspace_size;
 
     char *align_bit_weights;
-    std::vector<float> mean_arr;
+    float* mean_arr;    // conv
     int align_bit_weights_size;
     int lda_align;
     int new_lda;
     int bit_align;
 
     std::vector<float> biases;      // con, yolo layer, weight file
-    std::vector<float> biases_quant;
+    //std::vector<float> biases_quant;
     //float *bias_updates;
 
     int quantized;
 
-    std::vector<int8_t> weights_int8;
+    //std::vector<int8_t> weights_int8;
 
 
     //float *weight_updates;

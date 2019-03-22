@@ -5,7 +5,6 @@
 #include "layers/maxpool_layer.h"
 #include "layers/route_layer.h"
 #include "layers/upsample_layer.h"
-
 #include <time.h>
 
 NS_JJ_BEGIN
@@ -197,7 +196,8 @@ void Detector::calculate_binary_weights(network* net)
                 //printf("\n %d \n", j);
                 l->lda_align = 256; // 256bit for AVX2
 
-                binary_align_weights(l);
+                ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
+                pConvLayer->binary_align_weights();
 
                 if (l->use_bin_output)
                 {
@@ -207,69 +207,6 @@ void Detector::calculate_binary_weights(network* net)
         }
     }
 }
-
-void binarize_weights(std::vector<float> weights, int n, int size, std::vector<float>& binary)
-{
-    int i, f;
-    for (f = 0; f < n; ++f) {
-        float mean = 0;
-        for (i = 0; i < size; ++i) {
-            mean += fabs(weights[f*size + i]);
-        }
-        mean = mean / size;
-        for (i = 0; i < size; ++i) {
-            binary[f*size + i] = (weights[f*size + i] > 0) ? mean : -mean;
-        }
-    }
-}
-
-
-void float_to_bit(std::vector<float> src, std::vector<unsigned char>& dst, size_t size)
-{
-    size_t dst_size = size / 8 + 1;
-    //memset(dst, 0, dst_size);
-
-    size_t i;
-    char *byte_arr = (char*)calloc(size, sizeof(char));
-    for (i = 0; i < size; ++i) {
-        if (src[i] > 0) byte_arr[i] = 1;
-    }
-
-    //for (i = 0; i < size; ++i) {
-    //    dst[i / 8] |= byte_arr[i] << (i % 8);
-    //}
-
-    for (i = 0; i < size; i += 8) {
-        char dst_tmp = 0;
-        dst_tmp |= byte_arr[i + 0] << 0;
-        dst_tmp |= byte_arr[i + 1] << 1;
-        dst_tmp |= byte_arr[i + 2] << 2;
-        dst_tmp |= byte_arr[i + 3] << 3;
-        dst_tmp |= byte_arr[i + 4] << 4;
-        dst_tmp |= byte_arr[i + 5] << 5;
-        dst_tmp |= byte_arr[i + 6] << 6;
-        dst_tmp |= byte_arr[i + 7] << 7;
-        dst[i / 8] = dst_tmp;
-    }
-    free(byte_arr);
-}
-
-void get_mean_array(float *src, size_t size, size_t filters, float *mean_arr) {
-    size_t i, counter;
-    counter = 0;
-    for (i = 0; i < size; i += size / filters) {
-        mean_arr[counter++] = fabs(src[i]);
-    }
-}
-
-void Detector::binary_align_weights(layer *l)
-{
-   
-}
-
-
-
-
 
 
 Detector* Detector::instance()
@@ -330,7 +267,6 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         network_predict_cpu(net, X);
 
         printf("%s: Predicted in %f seconds.\n", input, (float)(clock() - time) / CLOCKS_PER_SEC); //sec(clock() - time));
-        //get_region_boxes_cpu(l, 1, 1, thresh, probs, boxes, 0, 0);            // get_region_boxes(): region_layer.c
 
         // 5. save to ImageInfo or show directly
         float hier_thresh = 0.5;
@@ -376,7 +312,11 @@ int yolo_num_detections(ILayer* pLayer, float thresh)
         for (n = 0; n < pLayerInfo->n; ++n)
         {
             int obj_index =  pLayer->entry_index(0, n* pLayerInfo->w* pLayerInfo->h + i, 4);
-            if (pLayerInfo->output[obj_index] > thresh) {
+
+            // detect something
+            float val = pLayerInfo->output[obj_index];
+            if (val > thresh)
+            {
                 ++count;
             }
         }
@@ -430,21 +370,6 @@ detection * Detector::get_network_boxes(network *net, int w, int h, float thresh
 }
 
 
-void load_convolutional_weights_cpu(ConvolutionLayer* pLayer, FILE *fp)
-{
-    layer* pLayerInfo = pLayer->getLayer();
-    ConvolutionWeight* pWeight = pLayer->getWeight();
-    int num = pLayerInfo->n * pLayerInfo->c * pLayerInfo->size * pLayerInfo->size;
-    int n = pLayerInfo->n;
-    fread(pWeight->biases, sizeof(float), n, fp);
-    if (pLayerInfo->batch_normalize && (!pLayerInfo->dontloadscales))
-    {
-        fread(pWeight->scales, sizeof(float), n, fp);
-        fread(pWeight->rolling_mean, sizeof(float), n, fp);
-        fread(pWeight->rolling_variance, sizeof(float), n, fp);
-    }
-    fread(pWeight->weights, sizeof(float), num, fp);
-}
 
 bool Detector::readWeightFile(network *net, char *filename, int cutoff)
 {
@@ -481,7 +406,8 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
 
         if (pLayer->getLayer()->type == CONVOLUTIONAL)
         {
-            load_convolutional_weights_cpu((ConvolutionLayer*)pLayer, fp);
+            ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
+            pConvLayer->load_convolutional_weights_cpu(fp);
         }
     }
     fprintf(stderr, "Done!\n");
@@ -761,7 +687,14 @@ float * Detector::network_predict_cpu(network* net, float *input)
      yolov2_forward_network_cpu(net, state);    // network on CPU
                                              //float *out = get_network_output(net);
 
-     return 0;
+
+    // updated by junliang, begin, do not care about return 
+     int i;
+     for (i = net->n - 1; i > 0; --i)
+     {
+         if (net->jjLayers[i]->getLayer()->type != COST) break;
+     }
+     return net->jjLayers[i]->getLayer()->output;
 }
 
 NS_JJ_END
