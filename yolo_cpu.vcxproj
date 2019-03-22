@@ -146,7 +146,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\additionally.cpp" />
     <ClCompile Include="src\box.cpp" />
     <ClCompile Include="src\detector.cpp" />
     <ClCompile Include="src\layers\convolutional_layer.cpp" />
@@ -157,14 +156,14 @@
     <ClCompile Include="src\layers\upsample_layer.cpp" />
     <ClCompile Include="src\layers\yolo_layer.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\old\additionally.cpp" />
+    <ClCompile Include="src\old\yolov2_forward_network.cpp" />
+    <ClCompile Include="src\old\yolov2_forward_network_quantized.cpp" />
     <ClCompile Include="src\parser\ini_parser.cpp" />
     <ClCompile Include="src\utils\image_util.cpp" />
     <ClCompile Include="src\utils\string_util.cpp" />
-    <ClCompile Include="src\yolov2_forward_network.cpp" />
-    <ClCompile Include="src\yolov2_forward_network_quantized.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\additionally.h" />
     <ClInclude Include="src\box.h" />
     <ClInclude Include="src\detector.h" />
     <ClInclude Include="src\layers\convolutional_layer.h" />
@@ -174,6 +173,7 @@
     <ClInclude Include="src\layers\route_layer.h" />
     <ClInclude Include="src\layers\upsample_layer.h" />
     <ClInclude Include="src\layers\yolo_layer.h" />
+    <ClInclude Include="src\old\additionally.h" />
     <ClInclude Include="src\parser\ini_parser.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\stb_image_write.h" />

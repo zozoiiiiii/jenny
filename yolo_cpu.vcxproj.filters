@@ -34,12 +34,17 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="src\box.cpp" />
-    <ClCompile Include="src\additionally.cpp" />
-    <ClCompile Include="src\yolov2_forward_network.cpp" />
-    <ClCompile Include="src\yolov2_forward_network_quantized.cpp" />
+    <ClCompile Include="src\old\additionally.cpp">
+      <Filter>old</Filter>
+    </ClCompile>
+    <ClCompile Include="src\old\yolov2_forward_network.cpp">
+      <Filter>old</Filter>
+    </ClCompile>
+    <ClCompile Include="src\old\yolov2_forward_network_quantized.cpp">
+      <Filter>old</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\additionally.h" />
     <ClInclude Include="src\box.h" />
     <ClInclude Include="src\detector.h" />
     <ClInclude Include="src\stb_image.h" />
@@ -74,6 +79,9 @@
     <ClInclude Include="src\utils\string_util.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="src\old\additionally.h">
+      <Filter>old</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="parser">
@@ -84,6 +92,9 @@
     </Filter>
     <Filter Include="utils">
       <UniqueIdentifier>{b2cbf1a6-78e0-4050-8512-71a90b74cad7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="old">
+      <UniqueIdentifier>{5340e9b4-737b-4403-88b9-aa3afa30ade6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@
 #ifndef ADDITIONALLY_H
 #define ADDITIONALLY_H
 
-#include "box.h"
+#include "../box.h"
 
 #include <stdio.h>
 #include <stdlib.h>

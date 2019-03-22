@@ -4,10 +4,14 @@
 #include "box.h"
 #include "pthread.h"
 
-#include "additionally.h"
+#include "old/additionally.h"
 #include "detector.h"
 
 
+//#define STB_IMAGE_IMPLEMENTATION
+//#include "stb_image.h"
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include "stb_image_write.h"
 
 // get prediction boxes: yolov2_forward_network.c
 void get_region_boxes_cpu(layer l, int w, int h, float thresh, float **probs, box *boxes, int only_objectness, int *map);
@@ -304,8 +308,8 @@ void run_detector(int argc, char **argv)
 
     if (0 == strcmp(argv[2], "test"))
     {
-        //test_detector_cpu(names, cfg, weights, filename, thresh, quantized, dont_show);
-        JJ::Detector::instance()->detectImage(names, cfg, weights, filename, thresh, quantized, dont_show);
+        test_detector_cpu(names, cfg, weights, filename, thresh, quantized, dont_show);
+        //JJ::Detector::instance()->detectImage(names, cfg, weights, filename, thresh, quantized, dont_show);
     }
 
 
