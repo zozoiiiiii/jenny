@@ -4,7 +4,6 @@ NS_JJ_BEGIN
 layer make_upsample_layer(int batch, int w, int h, int c, int stride)
 {
     layer l = { 0 };
-    l.type = UPSAMPLE;
     l.batch = batch;
     l.w = w;
     l.h = h;
@@ -36,7 +35,8 @@ bool UpsampleLayer::load(const IniParser* pParser, int section, size_params para
 {
     int stride = pParser->ReadInteger(section, "stride", 2);
     m_layerInfo = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
-    m_layerInfo.scale = pParser->ReadFloat(section, "scale", 1);
+    setType(UPSAMPLE);
+    m_scale = pParser->ReadFloat(section, "scale", 1);
     //return layer;
     return true;
 }
@@ -85,11 +85,11 @@ void UpsampleLayer::forward_layer_cpu(network_state state)
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
     if (l.reverse)
     {
-        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, l.scale, state.input);
+        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, m_scale, state.input);
     }
     else
     {
-        upsample_cpu(state.input, l.w, l.h, l.c, l.batch, l.stride, 1, l.scale, l.output);
+        upsample_cpu(state.input, l.w, l.h, l.c, l.batch, l.stride, 1, m_scale, l.output);
     }
 }
 NS_JJ_END

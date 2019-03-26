@@ -226,7 +226,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
 {
     int i;
     
-    m_layerInfo.type = CONVOLUTIONAL;
+    setType(CONVOLUTIONAL);
     //m_layerInfo.quantized = quantized;
 
     m_layerInfo.h = h;
@@ -262,7 +262,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.inputs = m_layerInfo.w * m_layerInfo.h * m_layerInfo.c;
 
     m_layerInfo.output = (float*)calloc(m_layerInfo.batch * m_layerInfo.outputs, sizeof(float));
-    m_layerInfo.output_int8.assign(m_layerInfo.batch * m_layerInfo.outputs, 0);
+    //m_layerInfo.output_int8.assign(m_layerInfo.batch * m_layerInfo.outputs, 0);
 
     if (binary)
     {

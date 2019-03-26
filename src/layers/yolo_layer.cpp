@@ -4,12 +4,10 @@
 
 NS_JJ_BEGIN
 
-layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes)
+layer YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes)
 {
     int i;
     layer l = { 0 };
-    l.type = YOLO;
-
     l.n = n;
     //l.total = total;
     l.batch = batch;
@@ -19,17 +17,17 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int
     l.out_w = l.w;
     l.out_h = l.h;
     l.out_c = l.c;
-    l.classes = classes;
-    l.cost.assign(1, 0.0f);
+    m_classes = classes;
+    //l.cost.assign(1, 0.0f);
     l.biases.assign(total * 2, 0.0f);
     if (!mask.empty())
-        l.mask = mask;
+        m_mask = mask;
     else
     {
-        l.mask.assign(n, 0);
+        m_mask.assign(n, 0);
         for (i = 0; i < n; ++i)
         {
-            l.mask[i] = i;
+            m_mask[i] = i;
         }
     }
     l.outputs = h * w*n*(classes + 4 + 1);
@@ -83,6 +81,7 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
 
     int max_boxes = pParser->ReadInteger(section, "max", 90);
     m_layerInfo = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
+    setType(YOLO);
     if (m_layerInfo.outputs != params.inputs)
     {
         printf("Error: layer.outputs == params.inputs \n");
@@ -118,6 +117,13 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
 
 
 
+int YoloLayer::entry_index(int batch, int location, int entry)
+{
+    int n = location / (m_layerInfo.w*m_layerInfo.h);
+    int loc = location % (m_layerInfo.w*m_layerInfo.h);
+    return batch * m_layerInfo.outputs + n * m_layerInfo.w*m_layerInfo.h*(4 + m_classes + 1)
+        + entry * m_layerInfo.w*m_layerInfo.h + loc;
+}
 
 
 void YoloLayer::forward_layer_cpu(network_state state)
@@ -135,7 +141,7 @@ void YoloLayer::forward_layer_cpu(network_state state)
             int index = entry_index(b, n*l.w*l.h, 0);
             ConvolutionLayer::activate_array(l.output + index, 2 * l.w*l.h, LOGISTIC);
             index = entry_index(b, n*l.w*l.h, 4);
-            ConvolutionLayer::activate_array(l.output + index, (1 + l.classes)*l.w*l.h, LOGISTIC);
+            ConvolutionLayer::activate_array(l.output + index, (1 + m_classes)*l.w*l.h, LOGISTIC);
         }
     }
 #endif
@@ -207,10 +213,10 @@ int YoloLayer::get_yolo_detections(int w, int h, int netw, int neth, float thres
             //if (objectness <= thresh) continue;   // incorrect behavior for Nan values
             if (objectness > thresh) {
                 int box_index = entry_index(0, n*l.w*l.h + i, 0);
-                dets[count].bbox = get_yolo_box(predictions, l.biases, l.mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h);
+                dets[count].bbox = get_yolo_box(predictions, l.biases, m_mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h);
                 dets[count].objectness = objectness;
-                dets[count].classes = l.classes;
-                for (j = 0; j < l.classes; ++j)
+                dets[count].classes = m_classes;
+                for (j = 0; j < m_classes; ++j)
                 {
                     int class_index = entry_index(0, n*l.w*l.h + i, 4 + 1 + j);
                     float prob = objectness * predictions[class_index];

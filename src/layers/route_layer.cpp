@@ -2,15 +2,14 @@
 
 NS_JJ_BEGIN
 
-layer make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes)
+layer RouteLayer::make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes)
 {
     fprintf(stderr, "route ");
     layer l = { 0 };
-    l.type = ROUTE;
     l.batch = batch;
     l.n = n;
-    l.input_layers = input_layers;
-    l.input_sizes = input_sizes;
+    m_input_layers = input_layers;
+    m_input_sizes = input_sizes;
     int i;
     int outputs = 0;
     for (i = 0; i < n; ++i) {
@@ -21,7 +20,7 @@ layer make_route_layer(int batch, int n, std::vector<int> input_layers, std::vec
     l.outputs = outputs;
     l.inputs = outputs;
     l.output = (float*)calloc(outputs*batch, sizeof(float));
-    l.output_int8.assign(outputs*batch, 0);
+    //l.output_int8.assign(outputs*batch, 0);
     return l;
 }
 
@@ -49,6 +48,7 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
     int batch = params.batch;
 
     m_layerInfo = make_route_layer(batch, nSize, layers, sizes);
+    setType(ROUTE);
 
     JJ::layer* first = params.net->jjLayers[layers[0]]->getLayer();
     m_layerInfo.out_w = first->out_w;
@@ -81,10 +81,10 @@ void RouteLayer::forward_layer_cpu(network_state state)
     int offset = 0;
     // number of merged layers
     for (i = 0; i < l.n; ++i) {
-        int index = l.input_layers[i];                    // source layer index
+        int index = m_input_layers[i];                    // source layer index
         ILayer* pLayer = state.net->jjLayers[index];
         float *input = pLayer->getLayer()->output;    // source layer output ptr
-        int input_size = l.input_sizes[i];                // source layer size
+        int input_size = m_input_sizes[i];                // source layer size
                                                         // batch index
         for (j = 0; j < l.batch; ++j) {
             memcpy(l.output + offset + j * l.outputs, input + j * input_size, input_size * sizeof(float));

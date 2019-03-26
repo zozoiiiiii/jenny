@@ -1419,7 +1419,7 @@ void quantinization_and_get_multipliers(network net)
     for (j = 0; j < net.n; ++j) {
         layer *l = &net.layers[j];
 
-        if (l->type == CONVOLUTIONAL) {
+        if (pLayer->getType() == CONVOLUTIONAL) {
             size_t const weights_size = l->size*l->size*l->c*l->n;
             size_t const filter_size = l->size*l->size*l->c;
 
@@ -1489,7 +1489,7 @@ void quantinization_and_get_multipliers(network net)
                 l->weights_quant_multipler, l->input_quant_multipler, l->output_multipler);
         }
         else {
-            printf(" Skip layer: %d \n", l->type);
+            printf(" Skip layer: %d \n", pLayer->getType());
         }
     }
 

@@ -26,7 +26,13 @@ public:
     virtual void forward_layer_cpu(network_state state);
 
     int get_yolo_detections(int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter);
+    int getClasses() { return m_classes; }
+    int entry_index(int batch, int location, int entry);
 private:
+    layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes);
+private:
+    int m_classes;    // yolo
+    std::vector<int> m_mask;  // yolo layer
 };
 
 NS_JJ_END

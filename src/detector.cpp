@@ -148,7 +148,7 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
     {
         ILayer* pLayer = net->jjLayers[j];
         layer *l = pLayer->getLayer();
-        if (l->type == CONVOLUTIONAL)
+        if (pLayer->getType() == CONVOLUTIONAL)
         {
             printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
             ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
@@ -175,7 +175,7 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
             }
         }
         else {
-            printf(" Skip layer: %d \n", l->type);
+            printf(" Skip layer: %d \n", pLayer->getType());
         }
     }  
 }
@@ -187,7 +187,7 @@ void Detector::calculate_binary_weights(network* net)
     {
         ILayer* pLayer = net->jjLayers[j];
         layer *l = pLayer->getLayer();
-        if (l->type == CONVOLUTIONAL)
+        if (pLayer->getType() == CONVOLUTIONAL)
         {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
             ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
@@ -215,10 +215,10 @@ Detector* Detector::instance()
     return &s_detector;
 }
 
-void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show)
+bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show)
 {
     if (!filename)
-        return;
+        return false;
 
     //ImageInfo **alphabet = load_alphabet();            // image.c
     ImageInfo **alphabet = NULL;
@@ -251,13 +251,11 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     char *input = buff;
     int j;
     float nms = .4;
-    while (1)
-    {
+
         // 3. open image
         strncpy(input, filename, 256);
         ImageInfo im = ImageUtil::load_image(input, 0, 0, 3);            // image.c
         ImageInfo sized = ImageUtil::resize_image(im, net->w, net->h);    // image.c
-        layer* l = net->jjLayers[net->n - 1]->getLayer();
 
 
         float *X = sized.data;
@@ -272,16 +270,20 @@ void Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         float hier_thresh = 0.5;
         int ext_output = 1, letterbox = 0, nboxes = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
-        if (nms)
-            do_nms_sort(dets, nboxes, l->classes, nms);
 
-        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l->classes, ext_output);
+        ILayer* pLayer = net->jjLayers[net->n - 1];
+        if (pLayer->getType() != YOLO)
+            return false;
+
+        YoloLayer* pYolo = (YoloLayer*)pLayer;
+        if (nms)
+            do_nms_sort(dets, nboxes, pYolo->getClasses(), nms);
+
+        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, pYolo->getClasses(), ext_output);
         ImageUtil::save_image_png(im, "predictions");    // image.c
         ImageUtil::free_image(im);                    // image.c
         ImageUtil::free_image(sized);                // image.c
-        if (filename)
-            break;
-    }
+        return true;
 
 }
 
@@ -292,7 +294,7 @@ void Detector::fill_network_boxes(network *net, int w, int h, float thresh, floa
     {
         ILayer* pLayer = net->jjLayers[j];
         layer* l = pLayer->getLayer();
-        if (l->type == YOLO)
+        if (pLayer->getType() == YOLO)
         {
             YoloLayer* pYoloLayer = (YoloLayer*)pLayer;
             int count = pYoloLayer->get_yolo_detections(w, h, net->w, net->h, thresh, map, relative, dets, letter);
@@ -301,7 +303,7 @@ void Detector::fill_network_boxes(network *net, int w, int h, float thresh, floa
     }
 }
 
-int yolo_num_detections(ILayer* pLayer, float thresh)
+int yolo_num_detections(YoloLayer* pLayer, float thresh)
 {
     layer* pLayerInfo = pLayer->getLayer();
 
@@ -332,12 +334,13 @@ int num_detections(network *net, float thresh)
     {
         ILayer* pLayer = net->jjLayers[i];
         layer* pLayerInfo = pLayer->getLayer();
-        if (pLayerInfo->type == YOLO)
+        if (pLayer->getType() == YOLO)
         {
-            s += yolo_num_detections(pLayer, thresh);
+            YoloLayer* pYolo = (YoloLayer*)pLayer;
+            s += yolo_num_detections(pYolo, thresh);
         }
 
-        if (pLayerInfo->type == DETECTION || pLayerInfo->type == REGION) {
+        if (pLayer->getType() == DETECTION || pLayer->getType() == REGION) {
             s += pLayerInfo->w * pLayerInfo->h * pLayerInfo->n;
         }
     }
@@ -346,7 +349,11 @@ int num_detections(network *net, float thresh)
 
 detection *make_network_boxes(network *net, float thresh, int *num)
 {
-    ILayer* pLayer = net->jjLayers[net->n - 1];
+    ILayer* pLayer = net->jjLayers[net->n - 1]; // the last layer always yolo
+    if (pLayer->getType() != YOLO)
+        return nullptr;
+
+    YoloLayer* pYolo = (YoloLayer*)pLayer;
     layer* pLayerInfo = pLayer->getLayer();
     int i;
     int nboxes = num_detections(net, thresh);
@@ -354,8 +361,9 @@ detection *make_network_boxes(network *net, float thresh, int *num)
     detection *dets = (detection*)calloc(nboxes, sizeof(detection));
     for (i = 0; i < nboxes; ++i)
     {
-        dets[i].prob = (float*)calloc(pLayerInfo->classes, sizeof(float));
-        if (pLayerInfo->coords > 4) {
+        dets[i].prob = (float*)calloc(pYolo->getClasses(), sizeof(float));
+        if (pLayerInfo->coords > 4)
+        {
             dets[i].mask = (float*)calloc(pLayerInfo->coords - 4, sizeof(float));
         }
     }
@@ -404,7 +412,7 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
         if (pLayer->getLayer()->dontload)
             continue;
 
-        if (pLayer->getLayer()->type == CONVOLUTIONAL)
+        if (pLayer->getType() == CONVOLUTIONAL)
         {
             ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
             pConvLayer->load_convolutional_weights_cpu(fp);
@@ -692,7 +700,7 @@ float * Detector::network_predict_cpu(network* net, float *input)
      int i;
      for (i = net->n - 1; i > 0; --i)
      {
-         if (net->jjLayers[i]->getLayer()->type != COST) break;
+         if (net->jjLayers[i]->getType() != COST) break;
      }
      return net->jjLayers[i]->getLayer()->output;
 }

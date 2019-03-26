@@ -29,7 +29,7 @@ class Detector
 {
 public:
     static Detector* instance();
-    void detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show);
+    bool detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show);
 
 private:
     JJ::network* readConfigFile(const char* cfgFile, int batch, int quantized);

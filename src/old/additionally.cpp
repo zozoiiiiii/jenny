@@ -70,7 +70,7 @@ void yolov2_fuse_conv_batchnorm(network net)
     for (j = 0; j < net.n; ++j) {
         layer *l = &net.layers[j];
 
-        if (l->type == CONVOLUTIONAL)
+        if (pLayer->getType() == CONVOLUTIONAL)
         {
             printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
 
@@ -105,7 +105,7 @@ void yolov2_fuse_conv_batchnorm(network net)
             }
         }
         else {
-            printf(" Skip layer: %d \n", l->type);
+            printf(" Skip layer: %d \n", pLayer->getType());
         }
     }
 }
@@ -293,7 +293,7 @@ void calculate_binary_weights(network net)
     {
         layer *l = &net.layers[j];
 
-        if (l->type == CONVOLUTIONAL)
+        if (pLayer->getType() == CONVOLUTIONAL)
         {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
 

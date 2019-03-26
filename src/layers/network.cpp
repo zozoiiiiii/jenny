@@ -8,7 +8,7 @@ int NetWork::get_network_output_size(network* pNet)
     for (i = pNet->n - 1; i > 0; --i)
     {
         ILayer* pLayer = pNet->jjLayers[i];
-        if (pLayer->getLayer()->type != COST)
+        if (pLayer->getType() != COST)
             break;
     }
 
@@ -21,7 +21,7 @@ float* NetWork::get_network_output(network* pNet)
     for (i = pNet->n - 1; i > 0; --i)
     {
         ILayer* pLayer = pNet->jjLayers[i];
-        if (pLayer->getLayer()->type != COST)
+        if (pLayer->getType() != COST)
             break;
     }
 

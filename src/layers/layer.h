@@ -55,18 +55,11 @@ typedef enum {
     BLANK
 } LAYER_TYPE;
 
-typedef enum {
-    SSE, MASKED, SMOOTH
-} COST_TYPE;
 
-enum ACTIVATION
-{
-    LOGISTIC, RELU, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN
-};
+
 
 struct layer
 {
-    LAYER_TYPE type;
 
     int batch;
     int inputs;
@@ -79,35 +72,24 @@ struct layer
     int reverse;
     int pad;
     int index;  // rout
-    int classes;    // yolo
     int coords; // box
 
-    std::vector<int> mask;  // yolo layer
 
 
     int dontload;
     int dontloadscales;
 
-    float scale;    // unsample
 
-    int* indexes; // maxpoll layer
-    std::vector<float> cost;    // yolo layer
 
 
 
     std::vector<float> biases;      // con, yolo layer, weight file
 
 
-    std::vector<int> input_layers; // route
-    std::vector<int> input_sizes; // route 
     float* output;  // con, yolo, maxpool, route, upsample
     std::vector<int8_t> output_int8;    //con, maxpool , route
     size_t workspace_size;
 };
-
-
-
-
 
 
 
@@ -146,9 +128,11 @@ public:
 
     layer* getLayer() { return &m_layerInfo; }
 
-    int entry_index(int batch, int location, int entry);
+    LAYER_TYPE getType() { return m_type; }
+    void setType(LAYER_TYPE lt) { m_type = lt; }
 protected:
     layer m_layerInfo;
+    LAYER_TYPE m_type;
 };
 
 NS_JJ_END

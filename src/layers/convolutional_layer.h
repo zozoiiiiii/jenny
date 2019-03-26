@@ -18,6 +18,10 @@ NS_JJ_BEGIN
 
 
 
+enum ACTIVATION
+{
+    LOGISTIC, RELU, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN
+};
 struct ConvolutionalLayerInfo
 {
 

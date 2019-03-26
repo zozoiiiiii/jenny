@@ -1,10 +1,9 @@
 #include "maxpool_layer.h"
 
 NS_JJ_BEGIN
-layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding)
+layer MaxpoolLayer::make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding)
 {
     layer l = { 0 };
-    l.type = MAXPOOL;
     l.batch = batch;
     l.h = h;
     l.w = w;
@@ -18,7 +17,7 @@ layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, i
     l.size = size;
     l.stride = stride;
     int output_size = l.out_h * l.out_w * l.out_c * batch;
-    l.indexes = (int*)calloc(output_size, sizeof(int));
+    m_indexes = (int*)calloc(output_size, sizeof(int));
     l.output = (float*)calloc(output_size, sizeof(float));
     l.output_int8.assign(output_size, 0);
     //l.delta = calloc(output_size, sizeof(float));
@@ -44,6 +43,7 @@ bool MaxpoolLayer::load(const IniParser* pParser, int section, size_params param
         return false;// error("Layer before maxpool layer must output image.");
 
     m_layerInfo = make_maxpool_layer(batch, h, w, c, size, stride, padding);
+    setType(MAXPOOL);
     return true;
 }
 
@@ -91,7 +91,7 @@ void MaxpoolLayer::forward_layer_cpu(network_state state)
 
     if (!state.train)
     {
-        forward_maxpool_layer_avx(state.input, l.output, l.indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
+        forward_maxpool_layer_avx(state.input, l.output, m_indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
         return;
     }
 
@@ -129,7 +129,7 @@ void MaxpoolLayer::forward_layer_cpu(network_state state)
                         }
                     }
                     l.output[out_index] = max;        // store max value
-                    l.indexes[out_index] = max_i;    // store max index
+                    m_indexes[out_index] = max_i;    // store max index
                 }
             }
         }
