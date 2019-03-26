@@ -151,8 +151,8 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
         if (l->type == CONVOLUTIONAL)
         {
             printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
-
-            if (l->batch_normalize)
+            ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
+            if (pConv->getConv()->batch_normalize)
             {
                 int f;
                 for (f = 0; f < l->n; ++f)
@@ -171,7 +171,7 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
                     }
                 }
 
-                l->batch_normalize = 0;
+                pConv->getConv()->batch_normalize = 0;
             }
         }
         else {
@@ -199,9 +199,9 @@ void Detector::calculate_binary_weights(network* net)
                 ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
                 pConvLayer->binary_align_weights();
 
-                if (l->use_bin_output)
+                if (pConv->getConv()->use_bin_output)
                 {
-                    l->activation = LINEAR;
+                    pConv->getConv()->activation = LINEAR;
                 }
             }
         }

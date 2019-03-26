@@ -21,14 +21,15 @@ NS_JJ_BEGIN
 struct ConvolutionalLayerInfo
 {
 
-
     char *align_bit_weights;
     float* mean_arr;    // conv
     int align_bit_weights_size;
     int lda_align;
     int bit_align;
 
+    int use_bin_output;
 
+    float bflops;
 
     ///////
     int filters;

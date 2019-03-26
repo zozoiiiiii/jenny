@@ -150,12 +150,12 @@ bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params p
         stride, padding, activation, batch_normalize, binary, xnor, params.net->adam, quantized, use_bin_output);
 
     m_conv.flipped = pParser->ReadInteger(section, "flipped", 0);
-    layer.dot = pParser->ReadFloat(section, "dot", 0);
+    //layer.dot = pParser->ReadFloat(section, "dot", 0);
     if (params.net->adam)
     {
-        layer.B1 = params.net->B1;
-        layer.B2 = params.net->B2;
-        layer.eps = params.net->eps;
+        //layer.B1 = params.net->B1;
+        //layer.B2 = params.net->B2;
+        //layer.eps = params.net->eps;
     }
 
     //return layer;
@@ -235,12 +235,12 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.n = n;
     m_conv.binary = binary;
     m_conv.xnor = xnor;
-    m_layerInfo.use_bin_output = use_bin_output;
+    m_conv.use_bin_output = use_bin_output;
     m_layerInfo.batch = batch;
     m_layerInfo.stride = stride;
     m_layerInfo.size = size;
     m_layerInfo.pad = padding;
-    m_layerInfo.batch_normalize = batch_normalize;
+    m_conv.batch_normalize = batch_normalize;
 
     m_weight.weights = (float*)calloc(c*n*size*size, sizeof(float));
     //m_layerInfo.weights_int8.assign( c*n*size*size, 0);
@@ -267,7 +267,7 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     if (binary)
     {
         m_weight.binary_weights = (float*)calloc (c*n*size*size, sizeof(float));
-        m_layerInfo.cweights.assign(c*n*size*size, 0);
+        //m_layerInfo.cweights.assign(c*n*size*size, 0);
         m_weight.scales = (float*)calloc(n, sizeof(float));
     }
 
@@ -303,20 +303,21 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     }
     if (adam)
     {
-        m_layerInfo.adam = 1;
-        m_layerInfo.m.assign( c*n*size*size, 0.0f);
-        m_layerInfo.v.assign(c*n*size*size, 0.0f);
+        //m_layerInfo.adam = 1;
+        //m_layerInfo.m.assign( c*n*size*size, 0.0f);
+        //m_layerInfo.v.assign(c*n*size*size, 0.0f);
     }
 
 
     m_layerInfo.workspace_size = get_workspace_size();
-    m_layerInfo.activation = activation;
+    m_conv.activation = activation;
 
-    m_layerInfo.bflops = (2.0 * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size*m_layerInfo.c * m_layerInfo.out_h*m_layerInfo.out_w) / 1000000000.;
-    if (m_conv.xnor && m_layerInfo.use_bin_output) fprintf(stderr, "convXB");
+    m_conv.bflops = (2.0 * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size*m_layerInfo.c * m_layerInfo.out_h*m_layerInfo.out_w) / 1000000000.;
+    if (m_conv.xnor && m_conv.use_bin_output) fprintf(stderr, "convXB");
     else if (m_conv.xnor) fprintf(stderr, "convX ");
     else fprintf(stderr, "conv  ");
-    fprintf(stderr, "%5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d %5.3f BF\n", n, size, size, stride, w, h, c, m_layerInfo.out_w, m_layerInfo.out_h, m_layerInfo.out_c, m_layerInfo.bflops);
+    fprintf(stderr, "%5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d %5.3f BF\n",
+        n, size, size, stride, w, h, c, m_layerInfo.out_w, m_layerInfo.out_h, m_layerInfo.out_c, m_conv.bflops);
 
     return m_layerInfo;
 }
@@ -956,7 +957,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
     int const out_size = out_h * out_w;
 
     // 2. Batch normalization
-    if (l.batch_normalize) {
+    if (m_conv.batch_normalize) {
         int b;
         for (b = 0; b < l.batch; b++) {
             for (f = 0; f < l.out_c; ++f) {
@@ -992,7 +993,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
     //    }
     //}
     //activate_array_cpu_custom(l.output, l.n*out_size, l.activation);
-    activate_array_cpu_custom(l.output, l.outputs*l.batch, l.activation);
+    activate_array_cpu_custom(l.output, l.outputs*l.batch, m_conv.activation);
 
 }
 
@@ -1092,7 +1093,7 @@ void ConvolutionLayer::load_convolutional_weights_cpu(FILE *fp)
     int num = pLayerInfo->n * pLayerInfo->c * pLayerInfo->size * pLayerInfo->size;
     int n = pLayerInfo->n;
     fread(pWeight->biases, sizeof(float), n, fp);
-    if (pLayerInfo->batch_normalize && (!pLayerInfo->dontloadscales))
+    if (m_conv.batch_normalize && (!pLayerInfo->dontloadscales))
     {
         fread(pWeight->scales, sizeof(float), n, fp);
         fread(pWeight->rolling_mean, sizeof(float), n, fp);

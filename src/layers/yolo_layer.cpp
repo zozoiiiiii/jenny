@@ -11,7 +11,7 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int
     l.type = YOLO;
 
     l.n = n;
-    l.total = total;
+    //l.total = total;
     l.batch = batch;
     l.h = h;
     l.w = w;
@@ -97,12 +97,12 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
       //  m_layerInfo.map = read_map(map_file);
     }
 
-    m_layerInfo.jitter = pParser->ReadFloat(section, "jitter", .2);
-    m_layerInfo.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
+    //m_layerInfo.jitter = pParser->ReadFloat(section, "jitter", .2);
+    //m_layerInfo.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
 
-    m_layerInfo.ignore_thresh = pParser->ReadFloat(section, "ignore_thresh", .5);
-    m_layerInfo.truth_thresh = pParser->ReadFloat(section, "truth_thresh", 1);
-    m_layerInfo.random = pParser->ReadInteger(section, "random", 0);
+    //m_layerInfo.ignore_thresh = pParser->ReadFloat(section, "ignore_thresh", .5);
+    //m_layerInfo.truth_thresh = pParser->ReadFloat(section, "truth_thresh", 1);
+    //m_layerInfo.random = pParser->ReadInteger(section, "random", 0);
 
     a = pParser->ReadString(section, "anchors");
     std::vector<float> bias;

@@ -67,9 +67,6 @@ enum ACTIVATION
 struct layer
 {
     LAYER_TYPE type;
-    ACTIVATION activation;
-    COST_TYPE cost_type;
-    int batch_normalize;
 
     int batch;
     int inputs;
@@ -82,86 +79,20 @@ struct layer
     int reverse;
     int pad;
     int index;  // rout
-    int use_bin_output;
-    int steps;
-    int hidden;
-    float dot;
-    float angle;
-    float jitter;
-    float saturation;
-    float exposure;
-    float shift;
-    float ratio;
-    int focal_loss;
-    int softmax;
-    int classes;
-    int coords;
-    int background;
-    int rescore;
-    int objectness;
-    int does_cost;
-    int joint;
-    int noadjust;
-    int reorg;
-    int log;
+    int classes;    // yolo
+    int coords; // box
 
     std::vector<int> mask;  // yolo layer
-    int total;
-    float bflops;
 
-    int adam;
-    float B1;
-    float B2;
-    float eps;
-    float *m_gpu;
-    float *v_gpu;
-    int t;
-    std::vector<float> m;
-    std::vector<float> v;
-
-    int  *map;
-
-    float alpha;
-    float beta;
-    float kappa;
-
-    float coord_scale;
-    float object_scale;
-    float noobject_scale;
-    float class_scale;
-    int bias_match;
-    int random;
-    float ignore_thresh;
-    float truth_thresh;
-    float thresh;
-    int classfix;
-    int absolute;
 
     int dontload;
     int dontloadscales;
 
-    float temperature;
-    float probability;
-    float scale;
+    float scale;    // unsample
 
     int* indexes; // maxpoll layer
-    float *rand;
     std::vector<float> cost;    // yolo layer
-    std::vector<char> cweights;
-    float *state;
-    float *prev_state;
-    float *forgot_state;
-    float *forgot_delta;
-    float *state_delta;
 
-    float *concat;
-    float *concat_delta;
-
-    char *align_bit_weights_gpu;
-    float *mean_arr_gpu;
-    float *align_workspace_gpu;
-    float *transposed_align_workspace_gpu;
-    int align_workspace_size;
 
 
     std::vector<float> biases;      // con, yolo layer, weight file
@@ -170,7 +101,6 @@ struct layer
     std::vector<int> input_layers; // route
     std::vector<int> input_sizes; // route 
     float* output;  // con, yolo, maxpool, route, upsample
-    float output_multipler;
     std::vector<int8_t> output_int8;    //con, maxpool , route
     size_t workspace_size;
 };
