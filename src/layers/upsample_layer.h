@@ -29,7 +29,10 @@ public:
     void backward_upsample_layer(const layer l, network net);
     void resize_upsample_layer(layer *l, int w, int h);
 private:
+    layer make_upsample_layer(int batch, int w, int h, int c, int stride);
+private:
     float m_scale;    // unsample
+    int m_reverse;
 };
 
 NS_JJ_END

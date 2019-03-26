@@ -1,7 +1,7 @@
 #include "upsample_layer.h"
 
 NS_JJ_BEGIN
-layer make_upsample_layer(int batch, int w, int h, int c, int stride)
+layer UpsampleLayer::make_upsample_layer(int batch, int w, int h, int c, int stride)
 {
     layer l = { 0 };
     l.batch = batch;
@@ -13,7 +13,7 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.out_c = c;
     if (stride < 0) {
         stride = -stride;
-        l.reverse = 1;
+        m_reverse = 1;
         l.out_w = w / stride;
         l.out_h = h / stride;
     }
@@ -24,7 +24,7 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.output = (float*)calloc(l.outputs*batch, sizeof(float));
 
     //l.forward = forward_upsample_layer;
-    if (l.reverse)
+    if (m_reverse)
         fprintf(stderr, "downsample         %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
     else
         fprintf(stderr, "upsample           %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
@@ -83,7 +83,7 @@ void UpsampleLayer::forward_layer_cpu(network_state state)
 {
     layer& l = m_layerInfo;
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
-    if (l.reverse)
+    if (m_reverse)
     {
         upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, m_scale, state.input);
     }

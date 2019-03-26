@@ -69,9 +69,7 @@ struct layer
     int n;
     int size;
     int stride;
-    int reverse;
     int pad;
-    int index;  // rout
     int coords; // box
 
 
