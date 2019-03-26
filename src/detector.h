@@ -34,8 +34,8 @@ public:
 private:
     JJ::network* readConfigFile(const char* cfgFile, int batch, int quantized);
     bool readWeightFile(network *net, char *filename, int cutoff);
-
     bool parseNetOptions(const IniParser* pIniParser, JJ::network* pNetWork);
+    void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
     
 
     JJ::learning_rate_policy get_policy(const char *s);
@@ -46,7 +46,6 @@ private:
     detection_with_class* get_actual_detections(detection *dets, int dets_num, float thresh, int* selected_detections_num);
 
 
-    void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
 
 
 

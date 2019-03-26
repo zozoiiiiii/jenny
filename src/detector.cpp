@@ -190,11 +190,11 @@ void Detector::calculate_binary_weights(network* net)
         if (l->type == CONVOLUTIONAL)
         {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
-
-            if (l->xnor)
+            ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
+            if (pConv->getConv()->xnor)
             {
                 //printf("\n %d \n", j);
-                l->lda_align = 256; // 256bit for AVX2
+                pConv->getConv()->lda_align = 256; // 256bit for AVX2
 
                 ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
                 pConvLayer->binary_align_weights();

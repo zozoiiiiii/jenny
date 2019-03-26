@@ -34,8 +34,8 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int
     }
     l.outputs = h * w*n*(classes + 4 + 1);
     l.inputs = l.outputs;
-    l.max_boxes = max_boxes;
-    l.truths = l.max_boxes*(4 + 1);    // 90*(4 + 1);
+    //l.max_boxes = max_boxes;
+   // l.truths = l.max_boxes*(4 + 1);    // 90*(4 + 1);
     l.output = (float*)calloc(batch*l.outputs, sizeof(float));
     for (i = 0; i < total * 2; ++i)
     {

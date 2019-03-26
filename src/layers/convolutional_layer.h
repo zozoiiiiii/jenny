@@ -20,6 +20,17 @@ NS_JJ_BEGIN
 
 struct ConvolutionalLayerInfo
 {
+
+
+    char *align_bit_weights;
+    float* mean_arr;    // conv
+    int align_bit_weights_size;
+    int lda_align;
+    int bit_align;
+
+
+
+    ///////
     int filters;
     int size;
     int stride;
@@ -67,6 +78,7 @@ public:
     virtual bool load(const IniParser* pParser, int section, size_params params);
     virtual void forward_layer_cpu(network_state state);
     ConvolutionWeight* getWeight() { return &m_weight; }
+    ConvolutionalLayerInfo* getConv() { return &m_conv; }
 
     void load_convolutional_weights_cpu(FILE *fp);
     void binary_align_weights();
@@ -76,7 +88,9 @@ private:
 
 
 
+    size_t ConvolutionLayer::get_workspace_size();
 private:
+    ConvolutionalLayerInfo m_conv;
     ConvolutionWeight m_weight;
 };
 

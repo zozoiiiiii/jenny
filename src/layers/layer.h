@@ -69,35 +69,19 @@ struct layer
     LAYER_TYPE type;
     ACTIVATION activation;
     COST_TYPE cost_type;
-    void(*forward)   (struct layer, struct network_state);
-    void(*backward)  (struct layer, struct network_state);
-    void(*update)    (struct layer, int, float, float, float);
-    void(*forward_gpu)   (struct layer, struct network_state);
-    void(*backward_gpu)  (struct layer, struct network_state);
-    void(*update_gpu)    (struct layer, int, float, float, float);
     int batch_normalize;
-    int shortcut;
+
     int batch;
-    int forced;
-    int flipped;
     int inputs;
     int outputs;
-    int truths;
     int h, w, c;
     int out_h, out_w, out_c;
     int n;
-    int max_boxes;
-    int groups;
     int size;
-    int side;
     int stride;
     int reverse;
     int pad;
-    int sqrt;
-    int flip;
-    int index;
-    int binary;
-    int xnor;
+    int index;  // rout
     int use_bin_output;
     int steps;
     int hidden;
@@ -173,81 +157,21 @@ struct layer
     float *concat;
     float *concat_delta;
 
-    //std::vector<float> binary_weights;
-
     char *align_bit_weights_gpu;
     float *mean_arr_gpu;
     float *align_workspace_gpu;
     float *transposed_align_workspace_gpu;
     int align_workspace_size;
 
-    char *align_bit_weights;
-    float* mean_arr;    // conv
-    int align_bit_weights_size;
-    int lda_align;
-    int new_lda;
-    int bit_align;
 
     std::vector<float> biases;      // con, yolo layer, weight file
-    //std::vector<float> biases_quant;
-    //float *bias_updates;
-
-    int quantized;
-
-    //std::vector<int8_t> weights_int8;
 
 
-    //float *weight_updates;
-    //float *weights_quant_multipler;
-    float weights_quant_multipler;
-    float input_quant_multipler;
-
-    float *col_image;
     std::vector<int> input_layers; // route
     std::vector<int> input_sizes; // route 
     float* output;  // con, yolo, maxpool, route, upsample
     float output_multipler;
     std::vector<int8_t> output_int8;    //con, maxpool , route
-    float * squared;
-    float * norms;
-
-    float * spatial_mean;
-    std::vector<float>  mean;
-    std::vector<float>  variance;
-
-    //float * mean_delta;
-    //float * variance_delta;
-
-
-    std::vector<float> x;
-    std::vector<float> x_norm;
-
-    struct layer *input_layer;
-    struct layer *self_layer;
-    struct layer *output_layer;
-
-    struct layer *input_gate_layer;
-    struct layer *state_gate_layer;
-    struct layer *input_save_layer;
-    struct layer *state_save_layer;
-    struct layer *input_state_layer;
-    struct layer *state_state_layer;
-
-    struct layer *input_z_layer;
-    struct layer *state_z_layer;
-
-    struct layer *input_r_layer;
-    struct layer *state_r_layer;
-
-    struct layer *input_h_layer;
-    struct layer *state_h_layer;
-
-    float *z_cpu;
-    float *r_cpu;
-    float *h_cpu;
-
-    //std::vector<float> binary_input;
-
     size_t workspace_size;
 };
 
