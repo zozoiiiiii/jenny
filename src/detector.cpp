@@ -373,16 +373,16 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
     fread(&major, sizeof(int), 1, fp);
     fread(&minor, sizeof(int), 1, fp);
     fread(&revision, sizeof(int), 1, fp);
-    if ((major * 10 + minor) >= 2)
-    {
-        fread(net->seen, sizeof(uint64_t), 1, fp);
-    }
-    else
-    {
-        int iseen = 0;
-        fread(&iseen, sizeof(int), 1, fp);
-        *net->seen = iseen;
-    }
+//     if ((major * 10 + minor) >= 2)
+//     {
+//         fread(net->seen, sizeof(uint64_t), 1, fp);
+//     }
+//     else
+//     {
+//         int iseen = 0;
+//         fread(&iseen, sizeof(int), 1, fp);
+//         *net->seen = iseen;
+//     }
     //int transpose = (major > 1000) || (minor > 1000);
 
     int i;
@@ -412,10 +412,10 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
     
     JJ::network* pNetWork = new JJ::network;
     pNetWork->n = parser.GetSectionCount() - 1; //  layer count
-    pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
+    //pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
 
     pNetWork->quantized = quantized;
-    pNetWork->do_input_calibration = 0;
+    //pNetWork->do_input_calibration = 0;
     
 
     size_params params;
@@ -567,19 +567,19 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 {
     int netSectionIndex = 0;
     net->batch = pIniParser->ReadInteger(netSectionIndex, "batch", 1);
-    net->learning_rate = pIniParser->ReadFloat(netSectionIndex, "learning_rate", .001);
-    net->momentum = pIniParser->ReadFloat(netSectionIndex, "momentum", .9);
-    net->decay = pIniParser->ReadFloat(netSectionIndex, "decay", .0001);
+    //net->learning_rate = pIniParser->ReadFloat(netSectionIndex, "learning_rate", .001);
+    //net->momentum = pIniParser->ReadFloat(netSectionIndex, "momentum", .9);
+    //net->decay = pIniParser->ReadFloat(netSectionIndex, "decay", .0001);
     int subdivs = pIniParser->ReadInteger(netSectionIndex, "subdivisions", 1);
     net->time_steps = pIniParser->ReadInteger(netSectionIndex, "time_steps", 1);
     net->batch /= subdivs;
     net->batch *= net->time_steps;
-    net->subdivisions = subdivs;
+    //net->subdivisions = subdivs;
 
     std::string input_calibration= pIniParser->ReadString(netSectionIndex, "input_calibration", "0");
     if (!input_calibration.empty())
     {
-        StringUtil::splitFloat(net->input_calibration, input_calibration, ",");
+        //StringUtil::splitFloat(net->input_calibration, input_calibration, ",");
     }
 
     net->adam = pIniParser->ReadInteger(netSectionIndex, "adam", 0);
@@ -587,21 +587,21 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
     {
         net->B1 = pIniParser->ReadFloat(netSectionIndex, "B1", .9);
         net->B2 = pIniParser->ReadFloat(netSectionIndex, "B2", .999);
-        net->eps = pIniParser->ReadFloat(netSectionIndex, "eps", .000001);
+        //net->eps = pIniParser->ReadFloat(netSectionIndex, "eps", .000001);
     }
 
     net->h = pIniParser->ReadInteger(netSectionIndex, "height", 0);
     net->w = pIniParser->ReadInteger(netSectionIndex, "width", 0);
     net->c = pIniParser->ReadInteger(netSectionIndex, "channels", 0);
     net->inputs = pIniParser->ReadInteger(netSectionIndex, "inputs", net->h * net->w * net->c);
-    net->max_crop = pIniParser->ReadInteger(netSectionIndex, "max_crop", net->w * 2);
-    net->min_crop = pIniParser->ReadInteger(netSectionIndex, "min_crop", net->w);
+    //net->max_crop = pIniParser->ReadInteger(netSectionIndex, "max_crop", net->w * 2);
+    //net->min_crop = pIniParser->ReadInteger(netSectionIndex, "min_crop", net->w);
 
-    net->angle = pIniParser->ReadFloat(netSectionIndex, "angle", 0);
-    net->aspect = pIniParser->ReadFloat(netSectionIndex, "aspect", 1);
-    net->saturation = pIniParser->ReadFloat(netSectionIndex, "saturation", 1);
-    net->exposure = pIniParser->ReadFloat(netSectionIndex, "exposure", 1);
-    net->hue = pIniParser->ReadFloat(netSectionIndex, "hue", 0);
+    //net->angle = pIniParser->ReadFloat(netSectionIndex, "angle", 0);
+    //net->aspect = pIniParser->ReadFloat(netSectionIndex, "aspect", 1);
+    //net->saturation = pIniParser->ReadFloat(netSectionIndex, "saturation", 1);
+    //net->exposure = pIniParser->ReadFloat(netSectionIndex, "exposure", 1);
+    //net->hue = pIniParser->ReadFloat(netSectionIndex, "hue", 0);
 
     if (!net->inputs && !(net->h && net->w && net->c))
         return false;
@@ -609,11 +609,11 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 
     std::string policy_s = pIniParser->ReadString(netSectionIndex, "policy", "constant");
     net->policy = get_policy(policy_s.c_str());
-    net->burn_in = pIniParser->ReadInteger(netSectionIndex, "burn_in", 0);
+    //net->burn_in = pIniParser->ReadInteger(netSectionIndex, "burn_in", 0);
     if (net->policy == JJ::STEP)
     {
-        net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
-        net->scale = pIniParser->ReadFloat(netSectionIndex, "scale", 1);
+        //net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
+        //net->scale = pIniParser->ReadFloat(netSectionIndex, "scale", 1);
     }
     else if (net->policy == JJ::STEPS)
     {
@@ -622,25 +622,25 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
         if (l.empty() || p.empty())
             return false;// ("STEPS policy must have steps and scales in cfg file");
 
-        StringUtil::splitInt(net->steps, l, ",");
-        StringUtil::splitFloat(net->scales, p, ",");
+        //StringUtil::splitInt(net->steps, l, ",");
+        //StringUtil::splitFloat(net->scales, p, ",");
 
         //net->num_steps = net->steps.size();
     }
     else if (net->policy == JJ::EXP)
     {
-        net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
+        //net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
     }
     else if (net->policy == JJ::SIG)
     {
-        net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
-        net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
+        //net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
+        //net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
     }
     else if (net->policy == JJ::POLY || net->policy == JJ::RANDOM)
     {
-        net->power = pIniParser->ReadFloat(netSectionIndex, "power", 1);
+        //net->power = pIniParser->ReadFloat(netSectionIndex, "power", 1);
     }
-    net->max_batches = pIniParser->ReadInteger(netSectionIndex, "max_batches", 0);
+    //net->max_batches = pIniParser->ReadInteger(netSectionIndex, "max_batches", 0);
     return true;
 }
 
