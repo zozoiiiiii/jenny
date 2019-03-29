@@ -56,7 +56,7 @@ private:
 
 
     void yolov2_forward_network_cpu(network* net, network_state state);
-    float* network_predict_cpu(network* net, float *input);
+    void network_predict_cpu(network* net, float *input);
 
 
     void fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter);

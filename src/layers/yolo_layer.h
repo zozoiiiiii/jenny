@@ -31,9 +31,9 @@ public:
 private:
     layer make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes);
 private:
-    int m_classes;    // yolo
-    std::vector<int> m_mask;  // yolo layer
-    std::vector<float> m_biases;      // con, yolo layer, weight file
+    int m_classes;
+    std::vector<int> m_mask;
+    std::vector<float> m_biases;
 };
 
 NS_JJ_END

@@ -56,24 +56,6 @@ static inline float lhtan_activate(float x)
     return x;
 }
 
-static inline ACTIVATION get_activation(char *s)
-{
-    if (strcmp(s, "logistic") == 0) return LOGISTIC;
-    if (strcmp(s, "loggy") == 0) return LOGGY;
-    if (strcmp(s, "relu") == 0) return RELU;
-    if (strcmp(s, "elu") == 0) return ELU;
-    if (strcmp(s, "relie") == 0) return RELIE;
-    if (strcmp(s, "plse") == 0) return PLSE;
-    if (strcmp(s, "hardtan") == 0) return HARDTAN;
-    if (strcmp(s, "lhtan") == 0) return LHTAN;
-    if (strcmp(s, "linear") == 0) return LINEAR;
-    if (strcmp(s, "ramp") == 0) return RAMP;
-    if (strcmp(s, "leaky") == 0) return LEAKY;
-    if (strcmp(s, "tanh") == 0) return TANH;
-    if (strcmp(s, "stair") == 0) return STAIR;
-    fprintf(stderr, "Couldn't find activation function %s, going with ReLU\n", s);
-    return RELU;
-}
 
 static float activate(float x, ACTIVATION a)
 {
@@ -150,22 +132,15 @@ bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params p
         stride, padding, activation, batch_normalize, binary, xnor, params.net->adam, quantized, use_bin_output);
 
     m_conv.flipped = pParser->ReadInteger(section, "flipped", 0);
-    //layer.dot = pParser->ReadFloat(section, "dot", 0);
-    if (params.net->adam)
-    {
-        //layer.B1 = params.net->B1;
-        //layer.B2 = params.net->B2;
-        //layer.eps = params.net->eps;
-    }
-
-    //return layer;
+;
     return true;
 }
 
 
 float rand_uniform(float min, float max)
 {
-    if (max < min) {
+    if (max < min)
+    {
         float swap = min;
         min = max;
         max = swap;
@@ -173,33 +148,6 @@ float rand_uniform(float min, float max)
     return ((float)rand() / RAND_MAX * (max - min)) + min;
 }
 
-// utils.c
-float rand_scale(float s)
-{
-    float scale = rand_uniform(1, s);
-    if (rand() % 2) return scale;
-    return 1. / scale;
-}
-
-// utils.c
-int rand_int(int min, int max)
-{
-    if (max < min) {
-        int s = min;
-        min = max;
-        max = s;
-    }
-    int r = (rand() % (max - min + 1)) + min;
-    return r;
-}
-
-// utils.c
-int constrain_int(int a, int min, int max)
-{
-    if (a < min) return min;
-    if (a > max) return max;
-    return a;
-}
 
 int convolutional_out_height(convolutional_layer l)
 {
@@ -233,20 +181,18 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.w = w;
     m_layerInfo.c = c;
     m_layerInfo.n = n;
-    m_conv.binary = binary;
-    m_conv.xnor = xnor;
-    m_conv.use_bin_output = use_bin_output;
     m_layerInfo.batch = batch;
     m_layerInfo.stride = stride;
     m_layerInfo.size = size;
     m_layerInfo.pad = padding;
+
+    m_conv.binary = binary;
+    m_conv.xnor = xnor;
+    m_conv.use_bin_output = use_bin_output;
     m_conv.batch_normalize = batch_normalize;
 
     m_weight.weights = (float*)calloc(c*n*size*size, sizeof(float));
-    //m_layerInfo.weights_int8.assign( c*n*size*size, 0);
-
     m_weight.biases = (float*)calloc(n, sizeof(float));
-    //m_layerInfo.biases_quant.assign(n, 0.0f);
 
     // float scale = 1./sqrt(size*size*c);
     float scale = sqrt(2. / (size*size*c));
@@ -262,12 +208,10 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     m_layerInfo.inputs = m_layerInfo.w * m_layerInfo.h * m_layerInfo.c;
 
     m_layerInfo.output = (float*)calloc(m_layerInfo.batch * m_layerInfo.outputs, sizeof(float));
-    //m_layerInfo.output_int8.assign(m_layerInfo.batch * m_layerInfo.outputs, 0);
 
     if (binary)
     {
         m_weight.binary_weights = (float*)calloc (c*n*size*size, sizeof(float));
-        //m_layerInfo.cweights.assign(c*n*size*size, 0);
         m_weight.scales = (float*)calloc(n, sizeof(float));
     }
 
@@ -286,26 +230,14 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
     if (batch_normalize)
     {
         m_weight.scales = (float*)calloc(n, sizeof(float));
-        //m_layerInfo.scale_updates = calloc(n, sizeof(float));
         for (i = 0; i < n; ++i)
         {
             m_weight.scales[i] = 1;
         }
 
-        //m_layerInfo.mean.assign(n, 0.0f);
-        //m_layerInfo.variance.assign(n, 0.0f);
-
-        //m_layerInfo.mean_delta = calloc(n, sizeof(float));
-        //m_layerInfo.variance_delta = calloc(n, sizeof(float));
 
         m_weight.rolling_mean = (float*)calloc(n, sizeof(float));
         m_weight.rolling_variance = (float*)calloc(n, sizeof(float));
-    }
-    if (adam)
-    {
-        //m_layerInfo.adam = 1;
-        //m_layerInfo.m.assign( c*n*size*size, 0.0f);
-        //m_layerInfo.v.assign(c*n*size*size, 0.0f);
     }
 
 
@@ -900,13 +832,6 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
 
                 free(re_packed_input);
 
-                // slow - convolution the packed inputs and weights: float x 32 by channel (as in cuDNN)
-                //convolution_repacked((uint32_t *)bin_re_packed_input, (uint32_t *)l.align_bit_weights, l.output,
-                //    l.w, l.h, l.c, l.n, l.size, l.pad, l.new_lda, l.mean_arr);
-
-                // // then exit from if()
-
-
                 im2col_cpu_custom((float *)bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, b);
                 //im2col_cpu((float *)bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, b);
 
@@ -914,18 +839,6 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
 
                 int new_k = l.size*l.size*l.c / 32;
 
-                // good for (l.c == 64)
-                //gemm_nn_bin_32bit_packed(m, n, new_k, 1,
-                //    l.align_bit_weights, l.new_lda/32,
-                //    b, n,
-                //    c, n, l.mean_arr);
-
-                // // then exit from if()
-
-
-                //size_t new_ldb = k + (ldb_align - k%ldb_align); // (k / 8 + 1) * 8;
-                //size_t t_intput_size = new_ldb * l.bit_align;// n;
-                //size_t t_bit_input_size = t_intput_size / 8;// +1;
 
                 char *t_bit_input = (char*)calloc(t_bit_input_size, sizeof(char));
 
@@ -935,11 +848,6 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
                 gemm_nn_custom_bin_mean_transposed(m, n, k, 1, (unsigned char*)m_conv.align_bit_weights, new_ldb,
                     (unsigned char*)t_bit_input, new_ldb, c, n, m_conv.mean_arr);
 
-                // // alternative GEMM
-                //gemm_nn_bin_transposed_32bit_packed(m, n, new_k, 1,
-                //    l.align_bit_weights, l.new_lda/32,
-                //    t_bit_input, new_ldb / 32,
-                //    c, n, l.mean_arr);
 
                 free(t_bit_input);
 

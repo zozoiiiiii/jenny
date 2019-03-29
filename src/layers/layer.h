@@ -58,24 +58,26 @@ typedef enum {
 
 
 
+
 struct layer
 {
-
     int batch;
     int inputs;
     int outputs;
+
+    // channels of input-array
+    // height of input-array
+    // width of input-array
     int h, w, c;
     int out_h, out_w, out_c;
-    int n;
-    int size;
+    int n;  // number of filters on this layer
+    int size;   // width and height of filters (the same size for all filters)
     int stride;
-    int pad;
-    int coords; // box
+    int pad;    // maxpool, conv
+    int coords; // detector
 
-
-
-    int dontload;
-    int dontloadscales;
+    int dontload;   // detector
+    int dontloadscales; // detector, conv
 
     float* output;  // con, yolo, maxpool, route, upsample
     size_t workspace_size;
@@ -123,6 +125,8 @@ public:
 protected:
     layer m_layerInfo;
     LAYER_TYPE m_type;
+
+
 };
 
 NS_JJ_END

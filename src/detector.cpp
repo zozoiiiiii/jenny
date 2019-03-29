@@ -412,10 +412,8 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
     
     JJ::network* pNetWork = new JJ::network;
     pNetWork->n = parser.GetSectionCount() - 1; //  layer count
-    //pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
-
+    
     pNetWork->quantized = quantized;
-    //pNetWork->do_input_calibration = 0;
     
 
     size_params params;
@@ -447,11 +445,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         std::string sectionName = parser.GetSectionByIndex(sectionIndex);
         int itemCnt = parser.GetSectionItemCount(sectionIndex);
 
-        //s = (section *)n->val;
-        //options = s->options;
-
-        // parse data into this layer and save to net
-        //JJ::layer l;
         JJ::ILayer* pLayer = nullptr;
         JJ::LAYER_TYPE lt = string_to_layer_type(sectionName.c_str());
 
@@ -508,10 +501,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
         if (pLayerInfo->workspace_size > workspace_size)
             workspace_size = pLayerInfo->workspace_size;
 
-        //free_section(s);
-        //n = n->next;
-        //++count;
-        //if (n)
         {
             params.h = pLayerInfo->out_h;
             params.w = pLayerInfo->out_w;
@@ -567,80 +556,25 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 {
     int netSectionIndex = 0;
     net->batch = pIniParser->ReadInteger(netSectionIndex, "batch", 1);
-    //net->learning_rate = pIniParser->ReadFloat(netSectionIndex, "learning_rate", .001);
-    //net->momentum = pIniParser->ReadFloat(netSectionIndex, "momentum", .9);
-    //net->decay = pIniParser->ReadFloat(netSectionIndex, "decay", .0001);
     int subdivs = pIniParser->ReadInteger(netSectionIndex, "subdivisions", 1);
     net->time_steps = pIniParser->ReadInteger(netSectionIndex, "time_steps", 1);
     net->batch /= subdivs;
     net->batch *= net->time_steps;
-    //net->subdivisions = subdivs;
-
-    std::string input_calibration= pIniParser->ReadString(netSectionIndex, "input_calibration", "0");
-    if (!input_calibration.empty())
-    {
-        //StringUtil::splitFloat(net->input_calibration, input_calibration, ",");
-    }
 
     net->adam = pIniParser->ReadInteger(netSectionIndex, "adam", 0);
     if (net->adam)
     {
         net->B1 = pIniParser->ReadFloat(netSectionIndex, "B1", .9);
         net->B2 = pIniParser->ReadFloat(netSectionIndex, "B2", .999);
-        //net->eps = pIniParser->ReadFloat(netSectionIndex, "eps", .000001);
     }
 
     net->h = pIniParser->ReadInteger(netSectionIndex, "height", 0);
     net->w = pIniParser->ReadInteger(netSectionIndex, "width", 0);
     net->c = pIniParser->ReadInteger(netSectionIndex, "channels", 0);
     net->inputs = pIniParser->ReadInteger(netSectionIndex, "inputs", net->h * net->w * net->c);
-    //net->max_crop = pIniParser->ReadInteger(netSectionIndex, "max_crop", net->w * 2);
-    //net->min_crop = pIniParser->ReadInteger(netSectionIndex, "min_crop", net->w);
-
-    //net->angle = pIniParser->ReadFloat(netSectionIndex, "angle", 0);
-    //net->aspect = pIniParser->ReadFloat(netSectionIndex, "aspect", 1);
-    //net->saturation = pIniParser->ReadFloat(netSectionIndex, "saturation", 1);
-    //net->exposure = pIniParser->ReadFloat(netSectionIndex, "exposure", 1);
-    //net->hue = pIniParser->ReadFloat(netSectionIndex, "hue", 0);
 
     if (!net->inputs && !(net->h && net->w && net->c))
         return false;
-        //error("No input parameters supplied");
-
-    std::string policy_s = pIniParser->ReadString(netSectionIndex, "policy", "constant");
-    net->policy = get_policy(policy_s.c_str());
-    //net->burn_in = pIniParser->ReadInteger(netSectionIndex, "burn_in", 0);
-    if (net->policy == JJ::STEP)
-    {
-        //net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
-        //net->scale = pIniParser->ReadFloat(netSectionIndex, "scale", 1);
-    }
-    else if (net->policy == JJ::STEPS)
-    {
-        std::string l = pIniParser->ReadString(netSectionIndex, "steps");
-        std::string p = pIniParser->ReadString(netSectionIndex, "scales");
-        if (l.empty() || p.empty())
-            return false;// ("STEPS policy must have steps and scales in cfg file");
-
-        //StringUtil::splitInt(net->steps, l, ",");
-        //StringUtil::splitFloat(net->scales, p, ",");
-
-        //net->num_steps = net->steps.size();
-    }
-    else if (net->policy == JJ::EXP)
-    {
-        //net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
-    }
-    else if (net->policy == JJ::SIG)
-    {
-        //net->gamma = pIniParser->ReadFloat(netSectionIndex, "gamma", 1);
-        //net->step = pIniParser->ReadInteger(netSectionIndex, "step", 1);
-    }
-    else if (net->policy == JJ::POLY || net->policy == JJ::RANDOM)
-    {
-        //net->power = pIniParser->ReadFloat(netSectionIndex, "power", 1);
-    }
-    //net->max_batches = pIniParser->ReadInteger(netSectionIndex, "max_batches", 0);
     return true;
 }
 
@@ -663,7 +597,7 @@ void Detector::yolov2_forward_network_cpu(network* net, network_state state)
 
 
 // detect on CPU
-float * Detector::network_predict_cpu(network* net, float *input)
+void Detector::network_predict_cpu(network* net, float *input)
 {
      network_state state;
      state.net = net;
@@ -672,17 +606,7 @@ float * Detector::network_predict_cpu(network* net, float *input)
      state.truth = 0;
      state.train = 0;
      state.delta = 0;
-     yolov2_forward_network_cpu(net, state);    // network on CPU
-                                             //float *out = get_network_output(net);
-
-
-    // updated by junliang, begin, do not care about return 
-     int i;
-     for (i = net->n - 1; i > 0; --i)
-     {
-         if (net->jjLayers[i]->getType() != COST) break;
-     }
-     return net->jjLayers[i]->getLayer()->output;
+     yolov2_forward_network_cpu(net, state);
 }
 
 NS_JJ_END

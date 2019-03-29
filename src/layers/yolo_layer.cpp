@@ -32,8 +32,6 @@ layer YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std:
     }
     l.outputs = h * w*n*(classes + 4 + 1);
     l.inputs = l.outputs;
-    //l.max_boxes = max_boxes;
-   // l.truths = l.max_boxes*(4 + 1);    // 90*(4 + 1);
     l.output = (float*)calloc(batch*l.outputs, sizeof(float));
     for (i = 0; i < total * 2; ++i)
     {
@@ -89,19 +87,6 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
         return false;
     }
 
-    //assert(m_layerInfo.outputs == params.inputs);
-    std::string map_file = pParser->ReadString(section, "map");
-    if (!map_file.empty())
-    {
-      //  m_layerInfo.map = read_map(map_file);
-    }
-
-    //m_layerInfo.jitter = pParser->ReadFloat(section, "jitter", .2);
-    //m_layerInfo.focal_loss = pParser->ReadInteger(section, "focal_loss", 0);
-
-    //m_layerInfo.ignore_thresh = pParser->ReadFloat(section, "ignore_thresh", .5);
-    //m_layerInfo.truth_thresh = pParser->ReadFloat(section, "truth_thresh", 1);
-    //m_layerInfo.random = pParser->ReadInteger(section, "random", 0);
 
     a = pParser->ReadString(section, "anchors");
     std::vector<float> bias;
