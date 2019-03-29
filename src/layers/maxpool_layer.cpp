@@ -19,7 +19,7 @@ layer MaxpoolLayer::make_maxpool_layer(int batch, int h, int w, int c, int size,
     int output_size = l.out_h * l.out_w * l.out_c * batch;
     m_indexes = (int*)calloc(output_size, sizeof(int));
     l.output = (float*)calloc(output_size, sizeof(float));
-    l.output_int8.assign(output_size, 0);
+    //l.output_int8.assign(output_size, 0);
     //l.delta = calloc(output_size, sizeof(float));
     // commented only for this custom version of Yolo v2
     //l.forward = forward_maxpool_layer;

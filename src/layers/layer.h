@@ -77,13 +77,6 @@ struct layer
     int dontload;
     int dontloadscales;
 
-
-
-
-
-    std::vector<float> biases;      // con, yolo layer, weight file
-
-
     float* output;  // con, yolo, maxpool, route, upsample
     std::vector<int8_t> output_int8;    //con, maxpool , route
     size_t workspace_size;

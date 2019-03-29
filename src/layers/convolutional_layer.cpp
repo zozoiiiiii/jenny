@@ -328,6 +328,30 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
 
 
 
+void ConvolutionLayer::fuse_batchnorm()
+{
+    layer* l = getLayer();
+    if (getConv()->batch_normalize)
+    {
+        int f;
+        for (f = 0; f < l->n; ++f)
+        {
+            ConvolutionWeight* pWeight = getWeight();
+            pWeight->biases[f] = pWeight->biases[f] - pWeight->scales[f] * pWeight->rolling_mean[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
+
+            const size_t filter_size = l->size*l->size*l->c;
+            int i;
+            for (i = 0; i < filter_size; ++i)
+            {
+                int w_index = f * filter_size + i;
+
+                pWeight->weights[w_index] = pWeight->weights[w_index] * pWeight->scales[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
+            }
+        }
+
+        getConv()->batch_normalize = 0;
+    }
+}
 
 
 //////////////////////////////////forward//////////////////////////////////////////

@@ -87,6 +87,7 @@ public:
 
     void load_convolutional_weights_cpu(FILE *fp);
     void binary_align_weights();
+    void fuse_batchnorm();
 private:
     layer make_convolutional_layer(int batch, int h, int w, int c, int n, int size, int stride, int padding, ACTIVATION activation,
         int batch_normalize, int binary, int xnor, int adam, int quantized, int use_bin_output);

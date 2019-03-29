@@ -33,6 +33,7 @@ private:
 private:
     int m_classes;    // yolo
     std::vector<int> m_mask;  // yolo layer
+    std::vector<float> m_biases;      // con, yolo layer, weight file
 };
 
 NS_JJ_END

@@ -19,7 +19,7 @@ layer YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std:
     l.out_c = l.c;
     m_classes = classes;
     //l.cost.assign(1, 0.0f);
-    l.biases.assign(total * 2, 0.0f);
+    m_biases.assign(total * 2, 0.0f);
     if (!mask.empty())
         m_mask = mask;
     else
@@ -37,7 +37,7 @@ layer YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std:
     l.output = (float*)calloc(batch*l.outputs, sizeof(float));
     for (i = 0; i < total * 2; ++i)
     {
-        l.biases[i] = .5;
+        m_biases[i] = .5;
     }
 
 
@@ -106,7 +106,7 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
     a = pParser->ReadString(section, "anchors");
     std::vector<float> bias;
     StringUtil::splitFloat(bias, a, ",");
-    m_layerInfo.biases = bias;
+    m_biases = bias;
 
     //return l;
     return true;
@@ -213,7 +213,7 @@ int YoloLayer::get_yolo_detections(int w, int h, int netw, int neth, float thres
             //if (objectness <= thresh) continue;   // incorrect behavior for Nan values
             if (objectness > thresh) {
                 int box_index = entry_index(0, n*l.w*l.h + i, 0);
-                dets[count].bbox = get_yolo_box(predictions, l.biases, m_mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h);
+                dets[count].bbox = get_yolo_box(predictions, m_biases, m_mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h);
                 dets[count].objectness = objectness;
                 dets[count].classes = m_classes;
                 for (j = 0; j < m_classes; ++j)

@@ -1,6 +1,10 @@
 #include "upsample_layer.h"
 
 NS_JJ_BEGIN
+
+UpsampleLayer::UpsampleLayer():m_scale(0),m_reverse(0)
+{}
+
 layer UpsampleLayer::make_upsample_layer(int batch, int w, int h, int c, int stride)
 {
     layer l = { 0 };

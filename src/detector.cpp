@@ -152,27 +152,7 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
         {
             printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
             ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
-            if (pConv->getConv()->batch_normalize)
-            {
-                int f;
-                for (f = 0; f < l->n; ++f)
-                {
-                    ConvolutionLayer* pConvLayer = (ConvolutionLayer*)pLayer;
-                    ConvolutionWeight* pWeight = pConvLayer->getWeight();
-                    pWeight->biases[f] = pWeight->biases[f] - pWeight->scales[f] * pWeight->rolling_mean[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
-
-                    const size_t filter_size = l->size*l->size*l->c;
-                    int i;
-                    for (i = 0; i < filter_size; ++i)
-                    {
-                        int w_index = f * filter_size + i;
-
-                        pWeight->weights[w_index] = pWeight->weights[w_index] * pWeight->scales[f] / (sqrtf(pWeight->rolling_variance[f]) + .000001f);
-                    }
-                }
-
-                pConv->getConv()->batch_normalize = 0;
-            }
+            pConv->fuse_batchnorm();
         }
         else {
             printf(" Skip layer: %d \n", pLayer->getType());
