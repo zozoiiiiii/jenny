@@ -51,8 +51,7 @@ struct ConvolutionalLayerInfo
     int flipped;
     float dot;
 
-    ConvolutionalLayerInfo() :filters(1), size(1), stride(1), pad(0), padding(0), activation(LOGISTIC), batch_normalize(0),
-        binary(0), xnor(0), bin_output(0), flipped(0), dot(0) {}
+    ConvolutionalLayerInfo() { memset(this, 0, sizeof(ConvolutionalLayerInfo)); }
 };
 
 

@@ -31,10 +31,12 @@ struct network
 
     int batch;
     std::vector<ILayer*> jjLayers;
+    uint64_t *seen;                 // weight file
 
     int outputs;
     float* output;
     learning_rate_policy policy;
+    float scale;//upsample layer
 
     int time_steps;
 

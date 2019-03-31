@@ -373,17 +373,17 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
     fread(&major, sizeof(int), 1, fp);
     fread(&minor, sizeof(int), 1, fp);
     fread(&revision, sizeof(int), 1, fp);
-//     if ((major * 10 + minor) >= 2)
-//     {
-//         fread(net->seen, sizeof(uint64_t), 1, fp);
-//     }
-//     else
-//     {
-//         int iseen = 0;
-//         fread(&iseen, sizeof(int), 1, fp);
-//         *net->seen = iseen;
-//     }
-    //int transpose = (major > 1000) || (minor > 1000);
+    if ((major * 10 + minor) >= 2)
+    {
+        fread(net->seen, sizeof(uint64_t), 1, fp);
+    }
+    else
+    {
+        int iseen = 0;
+        fread(&iseen, sizeof(int), 1, fp);
+        *net->seen = iseen;
+    }
+    int transpose = (major > 1000) || (minor > 1000);
 
     int i;
     for (i = 0; i < net->n && i < cutoff; ++i)
@@ -412,6 +412,7 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
     
     JJ::network* pNetWork = new JJ::network;
     pNetWork->n = parser.GetSectionCount() - 1; //  layer count
+    pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
     
     pNetWork->quantized = quantized;
     
