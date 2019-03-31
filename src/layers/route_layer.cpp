@@ -73,7 +73,7 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
 
 
 
-void RouteLayer::forward_layer_cpu(network_state state)
+void RouteLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
     layer& l = m_layerInfo;
 
@@ -82,7 +82,7 @@ void RouteLayer::forward_layer_cpu(network_state state)
     // number of merged layers
     for (i = 0; i < l.n; ++i) {
         int index = m_input_layers[i];                    // source layer index
-        ILayer* pLayer = state.net->jjLayers[index];
+        ILayer* pLayer = pNet->jjLayers[index];
         float *input = pLayer->getLayer()->output;    // source layer output ptr
         int input_size = m_input_sizes[i];                // source layer size
                                                         // batch index

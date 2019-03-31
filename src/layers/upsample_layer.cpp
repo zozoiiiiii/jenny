@@ -83,17 +83,17 @@ void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int for
     }
 }
 
-void UpsampleLayer::forward_layer_cpu(network_state state)
+void UpsampleLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
     layer& l = m_layerInfo;
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
     if (m_reverse)
     {
-        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, m_scale, state.input);
+        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, m_scale, input);
     }
     else
     {
-        upsample_cpu(state.input, l.w, l.h, l.c, l.batch, l.stride, 1, m_scale, l.output);
+        upsample_cpu(input, l.w, l.h, l.c, l.batch, l.stride, 1, m_scale, l.output);
     }
 }
 NS_JJ_END

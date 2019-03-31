@@ -23,7 +23,7 @@ class UpsampleLayer : public ILayer
 public:
     UpsampleLayer();
     virtual bool load(const IniParser* pParser, int section, size_params params);
-    virtual void forward_layer_cpu(network_state state);
+    virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train);
 
 
     void forward_upsample_layer(const layer l, network net);

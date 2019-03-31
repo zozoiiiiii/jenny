@@ -55,7 +55,6 @@ private:
 
 
 
-    void yolov2_forward_network_cpu(network* net, network_state state);
     void network_predict_cpu(network* net, float *input);
 
 

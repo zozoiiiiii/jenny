@@ -56,16 +56,20 @@ void forward_maxpool_layer_avx(float *src, float *dst, int* indexes, int size, i
     const int w_offset = -pad / 2;
     const int h_offset = -pad / 2;
 
-    for (b = 0; b < batch; ++b) {
-#pragma omp parallel for
-        for (k = 0; k < c; ++k) {
+    for (b = 0; b < batch; ++b)
+    {
+        for (k = 0; k < c; ++k)
+        {
             int i, j, m, n;
-            for (i = 0; i < out_h; ++i) {
-                for (j = 0; j < out_w; ++j) {
+            for (i = 0; i < out_h; ++i)
+            {
+                for (j = 0; j < out_w; ++j)
+                {
                     int out_index = j + out_w * (i + out_h * (k + c * b));
                     float max = -FLT_MAX;
                     int max_i = -1;
-                    for (n = 0; n < size; ++n) {
+                    for (n = 0; n < size; ++n)
+                    {
                         for (m = 0; m < size; ++m) {
                             int cur_h = h_offset + i * stride + n;
                             int cur_w = w_offset + j * stride + m;
@@ -85,13 +89,13 @@ void forward_maxpool_layer_avx(float *src, float *dst, int* indexes, int size, i
     }
 }
 
-void MaxpoolLayer::forward_layer_cpu(network_state state)
+void MaxpoolLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
     layer& l = m_layerInfo;
 
-    if (!state.train)
+    if (!train)
     {
-        forward_maxpool_layer_avx(state.input, l.output, m_indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
+        forward_maxpool_layer_avx(input, l.output, m_indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
         return;
     }
 
@@ -123,7 +127,7 @@ void MaxpoolLayer::forward_layer_cpu(network_state state)
                             int index = cur_w + l.w*(cur_h + l.h*(k + b * l.c));
                             int valid = (cur_h >= 0 && cur_h < l.h &&
                                 cur_w >= 0 && cur_w < l.w);
-                            float val = (valid != 0) ? state.input[index] : -FLT_MAX;
+                            float val = (valid != 0) ? input[index] : -FLT_MAX;
                             max_i = (val > max) ? index : max_i;    // get max index
                             max = (val > max) ? val : max;            // get max value
                         }

@@ -111,12 +111,12 @@ int YoloLayer::entry_index(int batch, int location, int entry)
 }
 
 
-void YoloLayer::forward_layer_cpu(network_state state)
+void YoloLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
     layer& l = m_layerInfo;
 
     int b, n;
-    memcpy(l.output, state.input, l.outputs*l.batch * sizeof(float));
+    memcpy(l.output, input, l.outputs*l.batch * sizeof(float));
 
 #ifndef GPU
     for (b = 0; b < l.batch; ++b)

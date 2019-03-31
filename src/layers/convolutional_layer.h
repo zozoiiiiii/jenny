@@ -24,7 +24,6 @@ enum ACTIVATION
 };
 struct ConvolutionalLayerInfo
 {
-
     char *align_bit_weights;
     float* mean_arr;    // conv
     int align_bit_weights_size;
@@ -51,7 +50,8 @@ struct ConvolutionalLayerInfo
     int flipped;
     float dot;
 
-    ConvolutionalLayerInfo() { memset(this, 0, sizeof(ConvolutionalLayerInfo)); }
+    ConvolutionalLayerInfo() :filters(1), size(1), stride(1), pad(0), padding(0), activation(LOGISTIC), batch_normalize(0),
+        binary(0), xnor(0), bin_output(0), flipped(0), dot(0) {}
 };
 
 
@@ -80,7 +80,7 @@ public:
     static void activate_array(float *x, const int n, const ACTIVATION a);
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params);
-    virtual void forward_layer_cpu(network_state state);
+    virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train);
     ConvolutionWeight* getWeight() { return &m_weight; }
     ConvolutionalLayerInfo* getConv() { return &m_conv; }
 

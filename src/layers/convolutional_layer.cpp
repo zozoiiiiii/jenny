@@ -754,7 +754,7 @@ void float_to_bit(float *src, unsigned char *dst, size_t size)
 
 
 
-void ConvolutionLayer::forward_layer_cpu(network_state state)
+void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
     layer& l = m_layerInfo;
     int out_h = (l.h + 2 * l.pad - l.size) / l.stride + 1;    // output_height=input_height for stride=1 and pad=1
@@ -772,10 +772,10 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
             binarize_weights(m_weight.weights, l.n, l.c*l.size*l.size, m_weight.binary_weights);
             //printf("\n binarize_weights l.align_bit_weights = %p \n", l.align_bit_weights);
         }
-        binarize_cpu(state.input, l.c*l.h*l.w*l.batch, m_weight.binary_input);
+        binarize_cpu(input, l.c*l.h*l.w*l.batch, m_weight.binary_input);
 
         m_weight.weights = m_weight.binary_weights;
-        state.input = m_weight.binary_input;
+        input = m_weight.binary_input;
     }
 
     // l.n - number of filters on this layer
@@ -791,7 +791,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
     int k = l.size*l.size*l.c;
     int n = out_h * out_w;
     float *a = m_weight.weights;
-    float *b = state.workspace;
+    float *b = pNet->workspace;
     float *c = l.output;
 
     /*
@@ -825,7 +825,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
                 uint32_t *bin_re_packed_input = (uint32_t*)calloc(new_c * l.w * l.h + 1, sizeof(uint32_t));
 
                 // float32x4 by channel (as in cuDNN)
-                repack_input(state.input, re_packed_input, l.w, l.h, l.c);
+                repack_input(input, re_packed_input, l.w, l.h, l.c);
 
                 // 32 x floats -> 1 x uint32_t
                 float_to_bit(re_packed_input, (unsigned char *)bin_re_packed_input, l.c * l.w * l.h);
@@ -855,7 +855,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
             else { // else (l.c % 32 != 0)
 
             //im2col_cpu_custom_align(state.input, l.c, l.h, l.w, l.size, l.stride, l.pad, b, l.bit_align);
-                im2col_cpu_custom_bin(state.input, l.c, l.h, l.w, l.size, l.stride, l.pad, b, m_conv.bit_align);
+                im2col_cpu_custom_bin(input, l.c, l.h, l.w, l.size, l.stride, l.pad, b, m_conv.bit_align);
 
                 int ldb_align = m_conv.lda_align;
                 size_t new_ldb = k + (ldb_align - k % ldb_align);
@@ -873,7 +873,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
             }
         }
         else {
-            im2col_cpu_custom(state.input, l.c, l.h, l.w, l.size, l.stride, l.pad, b);    // AVX2
+            im2col_cpu_custom(input, l.c, l.h, l.w, l.size, l.stride, l.pad, b);    // AVX2
             int t;
 #pragma omp parallel for
             for (t = 0; t < m; ++t) {
@@ -881,7 +881,7 @@ void ConvolutionLayer::forward_layer_cpu(network_state state)
             }
         }
         c += n * m;
-        state.input += l.c*l.h*l.w;
+        input += l.c*l.h*l.w;
 
     }
 

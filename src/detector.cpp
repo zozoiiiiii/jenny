@@ -580,34 +580,16 @@ bool Detector::parseNetOptions(const IniParser* pIniParser, JJ::network* net)
 }
 
 
-
-
-void Detector::yolov2_forward_network_cpu(network* net, network_state state)
-{
-    state.workspace = net->workspace;
-    int i;
-    for (i = 0; i < net->n; ++i)
-    {
-        state.index = i;
-        ILayer* pLayer = net->jjLayers[i];
-        pLayer->forward_layer_cpu(state);
-
-        state.input = pLayer->getLayer()->output;
-    }
-}
-
-
 // detect on CPU
 void Detector::network_predict_cpu(network* net, float *input)
 {
-     network_state state;
-     state.net = net;
-     state.index = 0;
-     state.input = input;
-     state.truth = 0;
-     state.train = 0;
-     state.delta = 0;
-     yolov2_forward_network_cpu(net, state);
+     float* pInput = input;
+     for (int i = 0; i < net->n; ++i)
+     {
+         ILayer* pLayer = net->jjLayers[i];
+         pLayer->forward_layer_cpu(net, pInput, 0);
+         pInput = pLayer->getLayer()->output;
+     }
 }
 
 NS_JJ_END

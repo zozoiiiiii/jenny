@@ -70,11 +70,11 @@ struct layer
     // width of input-array
     int h, w, c;
     int out_h, out_w, out_c;
-    int n;  // number of filters on this layer
-    int size;   // width and height of filters (the same size for all filters)
+    int n;          // number of filters on this layer
+    int size;       // width and height of filters (the same size for all filters)
     int stride;
-    int pad;    // maxpool, conv
-    int coords; // detector
+    int pad;        // maxpool, conv
+    int coords;     // detector
 
     int dontload;   // detector
     int dontloadscales; // detector, conv
@@ -99,24 +99,11 @@ struct size_params
     JJ::network* net;
 };
 
-
-struct network_state
-{
-    float *truth;
-    float *input;
-    int8_t *input_int8;
-    float *delta;
-    float *workspace;
-    int train;
-    int index;
-    JJ::network* net;
-};
-
 class ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
-    virtual void forward_layer_cpu(network_state state) {}
+    virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train){}
 
     layer* getLayer() { return &m_layerInfo; }
 

@@ -36,7 +36,6 @@ struct network
     int outputs;
     float* output;
     learning_rate_policy policy;
-    float scale;//upsample layer
 
     int time_steps;
 
