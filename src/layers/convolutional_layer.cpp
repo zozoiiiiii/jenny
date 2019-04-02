@@ -126,10 +126,6 @@ bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params p
     m_conv.xnor = pParser->ReadInteger(section, "xnor", 0);
     m_conv.use_bin_output = pParser->ReadInteger(section, "bin_output", 0);
 
-    int quantized = params.quantized;
-    if (params.index == 0 || m_conv.activation == LINEAR || (params.index > 1 && m_layerInfo.stride > 1) || m_layerInfo.size == 1)
-        quantized = 0; // disable Quantized for 1st and last layers
-
     make_convolutional_layer();
 
     m_conv.flipped = pParser->ReadInteger(section, "flipped", 0);

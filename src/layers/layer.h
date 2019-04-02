@@ -88,7 +88,6 @@ struct layer
 
 struct size_params
 {
-    int quantized;
     int batch;
     int inputs;
     int h;

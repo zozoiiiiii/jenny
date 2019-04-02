@@ -89,9 +89,6 @@ public:
     void fuse_batchnorm();
 private:
     void make_convolutional_layer();
-
-
-
     size_t ConvolutionLayer::get_workspace_size();
 private:
     ConvolutionalLayerInfo m_conv;

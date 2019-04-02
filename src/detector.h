@@ -29,10 +29,10 @@ class Detector
 {
 public:
     static Detector* instance();
-    bool detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show);
+    bool detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int dont_show);
 
 private:
-    JJ::network* readConfigFile(const char* cfgFile, int batch, int quantized);
+    JJ::network* readConfigFile(const char* cfgFile, int batch);
     bool readWeightFile(network *net, char *filename, int cutoff);
     bool parseNetOptions(const IniParser* pIniParser, JJ::network* pNetWork);
     void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);

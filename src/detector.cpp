@@ -195,7 +195,7 @@ Detector* Detector::instance()
     return &s_detector;
 }
 
-bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int quantized, int dont_show)
+bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int dont_show)
 {
     if (!filename)
         return false;
@@ -204,7 +204,7 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     ImageInfo **alphabet = NULL;
 
     // 1. read config file, like convolution layer
-    network* net = readConfigFile(cfgfile, 1, quantized);    // parser.c
+    network* net = readConfigFile(cfgfile, 1);    // parser.c
     if (weightfile)
     {
         // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
@@ -219,12 +219,6 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     yolov2_fuse_conv_batchnorm(net);
     calculate_binary_weights(net);
 
-    // cancel here
-    if (quantized)
-    {
-        printf("\n\n Quantinization! \n\n");
-        //quantinization_and_get_multipliers(net);
-    }
 
     clock_t time;
     char buff[256];
@@ -404,7 +398,7 @@ bool Detector::readWeightFile(network *net, char *filename, int cutoff)
 }
 
 
-JJ::network* Detector::readConfigFile(const char* filename, int batch, int quantized)
+JJ::network* Detector::readConfigFile(const char* filename, int batch)
 {
     IniParser parser;
     if (!parser.LoadFromFile(filename))
@@ -414,11 +408,9 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
     pNetWork->n = parser.GetSectionCount() - 1; //  layer count
     pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
     
-    pNetWork->quantized = quantized;
     
 
     size_params params;
-    params.quantized = quantized;
 
     if (!parseNetOptions(&parser, pNetWork))
         return nullptr;
@@ -499,6 +491,7 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch, int quant
 
         // save this layer
         pNetWork->jjLayers.push_back(pLayer);
+
         if (pLayerInfo->workspace_size > workspace_size)
             workspace_size = pLayerInfo->workspace_size;
 

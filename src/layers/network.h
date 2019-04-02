@@ -25,7 +25,6 @@ enum learning_rate_policy
 
 struct network
 {
-    int quantized;
     float* workspace;
     int n;  // layer count
 
