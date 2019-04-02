@@ -101,35 +101,36 @@ void ConvolutionLayer::activate_array(float *x, const int n, const ACTIVATION a)
 
 bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params params)
 {
-    int n = pParser->ReadInteger(section, "filters", 1);
-    int size = pParser->ReadInteger(section, "size", 1);
-    int stride = pParser->ReadInteger(section, "stride", 1);
-    int pad = pParser->ReadInteger(section, "pad", 0);
-    int padding = pParser->ReadInteger(section, "padding", 0);
-    if (pad) padding = size / 2;
-
-    std::string activation_s = pParser->ReadString(section, "activation", "logistic");
-    ACTIVATION activation = get_activation(activation_s);
-
-    int batch, h, w, c;
-    h = params.h;
-    w = params.w;
-    c = params.c;
-    batch = params.batch;
-    if (!(h && w && c))
+    if (!(params.h && params.w && params.c))
         return false;// ("Layer before convolutional layer must output image.");
 
-    int batch_normalize = pParser->ReadInteger(section, "batch_normalize", 0);
-    int binary = pParser->ReadInteger(section, "binary", 0);
-    int xnor = pParser->ReadInteger(section, "xnor", 0);
-    int use_bin_output = pParser->ReadInteger(section, "bin_output", 0);
+
+    m_layerInfo.n = pParser->ReadInteger(section, "filters", 1);
+    m_layerInfo.size = pParser->ReadInteger(section, "size", 1);
+    m_layerInfo.stride = pParser->ReadInteger(section, "stride", 1);
+    m_layerInfo.pad = pParser->ReadInteger(section, "padding", 0);
+    int pad = pParser->ReadInteger(section, "pad", 0);
+    if (pad)
+        m_layerInfo.pad = m_layerInfo.size / 2;
+
+    std::string activation_s = pParser->ReadString(section, "activation", "logistic");
+    m_conv.activation = get_activation(activation_s);
+
+    m_layerInfo.h = params.h;
+    m_layerInfo.w = params.w;
+    m_layerInfo.c = params.c;
+    m_layerInfo.batch = params.batch;
+
+    m_conv.batch_normalize = pParser->ReadInteger(section, "batch_normalize", 0);
+    m_conv.binary = pParser->ReadInteger(section, "binary", 0);
+    m_conv.xnor = pParser->ReadInteger(section, "xnor", 0);
+    m_conv.use_bin_output = pParser->ReadInteger(section, "bin_output", 0);
 
     int quantized = params.quantized;
-    if (params.index == 0 || activation == LINEAR || (params.index > 1 && stride > 1) || size == 1)
+    if (params.index == 0 || m_conv.activation == LINEAR || (params.index > 1 && m_layerInfo.stride > 1) || m_layerInfo.size == 1)
         quantized = 0; // disable Quantized for 1st and last layers
 
-    convolutional_layer layer = make_convolutional_layer(batch, h, w, c, n, size,
-        stride, padding, activation, batch_normalize, binary, xnor, params.net->adam, quantized, use_bin_output);
+    make_convolutional_layer();
 
     m_conv.flipped = pParser->ReadInteger(section, "flipped", 0);
 ;
@@ -169,55 +170,40 @@ size_t ConvolutionLayer::get_workspace_size()
     return (size_t)l.out_h*l.out_w*l.size*l.size*l.c * sizeof(float);
 }
 
-layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c, int n, int size, int stride, int padding,
-    ACTIVATION activation, int batch_normalize, int binary, int xnor, int adam, int quantized, int use_bin_output)
+void ConvolutionLayer::make_convolutional_layer()
 {
     int i;
     
     setType(CONVOLUTIONAL);
     //m_layerInfo.quantized = quantized;
 
-    m_layerInfo.h = h;
-    m_layerInfo.w = w;
-    m_layerInfo.c = c;
-    m_layerInfo.n = n;
-    m_layerInfo.batch = batch;
-    m_layerInfo.stride = stride;
-    m_layerInfo.size = size;
-    m_layerInfo.pad = padding;
+    int weightsSize = m_layerInfo.c * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size;
+    m_weight.weights = (float*)calloc(weightsSize, sizeof(float));
+    m_weight.biases = (float*)calloc(m_layerInfo.n, sizeof(float));
 
-    m_conv.binary = binary;
-    m_conv.xnor = xnor;
-    m_conv.use_bin_output = use_bin_output;
-    m_conv.batch_normalize = batch_normalize;
-
-    m_weight.weights = (float*)calloc(c*n*size*size, sizeof(float));
-    m_weight.biases = (float*)calloc(n, sizeof(float));
-
-    // float scale = 1./sqrt(size*size*c);
-    float scale = sqrt(2. / (size*size*c));
-    for (i = 0; i < c*n*size*size; ++i)
+    float scale = sqrt(2. / (m_layerInfo.size * m_layerInfo.size * m_layerInfo.c));
+    for (i = 0; i < weightsSize; ++i)
         m_weight.weights[i] = scale * rand_uniform(-1, 1) ;
 
     int out_h = convolutional_out_height(m_layerInfo);
     int out_w = convolutional_out_width(m_layerInfo);
     m_layerInfo.out_h = out_h;
     m_layerInfo.out_w = out_w;
-    m_layerInfo.out_c = n;
+    m_layerInfo.out_c = m_layerInfo.n;
     m_layerInfo.outputs = m_layerInfo.out_h * m_layerInfo.out_w * m_layerInfo.out_c;
     m_layerInfo.inputs = m_layerInfo.w * m_layerInfo.h * m_layerInfo.c;
 
     m_layerInfo.output = (float*)calloc(m_layerInfo.batch * m_layerInfo.outputs, sizeof(float));
 
-    if (binary)
+    if (m_conv.binary)
     {
-        m_weight.binary_weights = (float*)calloc (c*n*size*size, sizeof(float));
-        m_weight.scales = (float*)calloc(n, sizeof(float));
+        m_weight.binary_weights = (float*)calloc (weightsSize, sizeof(float));
+        m_weight.scales = (float*)calloc(m_layerInfo.n, sizeof(float));
     }
 
-    if (xnor)
+    if (m_conv.xnor)
     {
-        m_weight.binary_weights = (float*)calloc(c*n*size*size, sizeof(float));
+        m_weight.binary_weights = (float*)calloc(weightsSize, sizeof(float));
         m_weight.binary_input = (float*)calloc(m_layerInfo.inputs*m_layerInfo.batch, sizeof(float));
 
         int align = 32;// 8;
@@ -227,31 +213,30 @@ layer ConvolutionLayer::make_convolutional_layer(int batch, int h, int w, int c,
         m_conv.mean_arr = (float*)calloc(m_layerInfo.n, sizeof(float));
     }
 
-    if (batch_normalize)
+    if (m_conv.batch_normalize)
     {
-        m_weight.scales = (float*)calloc(n, sizeof(float));
-        for (i = 0; i < n; ++i)
+        m_weight.scales = (float*)calloc(m_layerInfo.n, sizeof(float));
+        for (i = 0; i < m_layerInfo.n; ++i)
         {
             m_weight.scales[i] = 1;
         }
 
 
-        m_weight.rolling_mean = (float*)calloc(n, sizeof(float));
-        m_weight.rolling_variance = (float*)calloc(n, sizeof(float));
+        m_weight.rolling_mean = (float*)calloc(m_layerInfo.n, sizeof(float));
+        m_weight.rolling_variance = (float*)calloc(m_layerInfo.n, sizeof(float));
     }
 
 
     m_layerInfo.workspace_size = get_workspace_size();
-    m_conv.activation = activation;
 
     m_conv.bflops = (2.0 * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size*m_layerInfo.c * m_layerInfo.out_h*m_layerInfo.out_w) / 1000000000.;
     if (m_conv.xnor && m_conv.use_bin_output) fprintf(stderr, "convXB");
     else if (m_conv.xnor) fprintf(stderr, "convX ");
     else fprintf(stderr, "conv  ");
-    fprintf(stderr, "%5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d %5.3f BF\n",
-        n, size, size, stride, w, h, c, m_layerInfo.out_w, m_layerInfo.out_h, m_layerInfo.out_c, m_conv.bflops);
 
-    return m_layerInfo;
+    fprintf(stderr, "%5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d %5.3f BF\n",
+        m_layerInfo.n, m_layerInfo.size, m_layerInfo.size, m_layerInfo.stride, m_layerInfo.w, m_layerInfo.h, m_layerInfo.c,
+        m_layerInfo.out_w, m_layerInfo.out_h, m_layerInfo.out_c, m_conv.bflops);
 }
 
 
