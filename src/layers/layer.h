@@ -70,14 +70,13 @@ struct layer
     // width of input-array
     int h, w, c;
     int out_h, out_w, out_c;
-    int n;          // number of filters on this layer
+    int n;          // filter size
     int size;       // width and height of filters (the same size for all filters)
     int stride;
-    int pad;        // maxpool, conv
-    int coords;     // detector
+    int pad;
 
-    int dontload;   // detector
-    int dontloadscales; // detector, conv
+    int dontload;   // this conv layer not need to load weight information
+    int dontloadscales;
 
     float* output;  // con, yolo, maxpool, route, upsample
     size_t workspace_size;
@@ -102,17 +101,19 @@ class ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
-    virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train){}
+    virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train) {}
+    //virtual void backward_layer_cpu(JJ::network* pNet, float *input, int train) {}
+    //virtual void update_layer_cpu(JJ::network* pNet, float *input, int train) {}
+
 
     layer* getLayer() { return &m_layerInfo; }
 
     LAYER_TYPE getType() { return m_type; }
     void setType(LAYER_TYPE lt) { m_type = lt; }
+
 protected:
     layer m_layerInfo;
     LAYER_TYPE m_type;
-
-
 };
 
 NS_JJ_END

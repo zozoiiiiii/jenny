@@ -336,10 +336,6 @@ detection *make_network_boxes(network *net, float thresh, int *num)
     for (i = 0; i < nboxes; ++i)
     {
         dets[i].prob = (float*)calloc(pYolo->getClasses(), sizeof(float));
-        if (pLayerInfo->coords > 4)
-        {
-            dets[i].mask = (float*)calloc(pLayerInfo->coords - 4, sizeof(float));
-        }
     }
     return dets;
 }
@@ -515,21 +511,6 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch)
     return pNetWork;
 }
 
-
-
-
-JJ::learning_rate_policy Detector::get_policy(const char *s)
-{
-    if (strcmp(s, "random") == 0) return JJ::RANDOM;
-    if (strcmp(s, "poly") == 0) return JJ::POLY;
-    if (strcmp(s, "constant") == 0) return JJ::CONSTANT;
-    if (strcmp(s, "step") == 0) return JJ::STEP;
-    if (strcmp(s, "exp") == 0) return JJ::EXP;
-    if (strcmp(s, "sigmoid") == 0) return JJ::SIG;
-    if (strcmp(s, "steps") == 0) return JJ::STEPS;
-    fprintf(stderr, "Couldn't find policy %s, going with constant\n", s);
-    return JJ::CONSTANT;
-}
 
 JJ::LAYER_TYPE Detector::string_to_layer_type(const std::string& type)
 {

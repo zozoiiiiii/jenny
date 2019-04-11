@@ -30,7 +30,7 @@ struct network
 
     int batch;
     std::vector<ILayer*> jjLayers;
-    uint64_t *seen;                 // weight file
+    uint64_t *seen;                 // weight file, not in use
 
     int outputs;
     float* output;

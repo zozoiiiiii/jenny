@@ -38,7 +38,6 @@ private:
     void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
     
 
-    JJ::learning_rate_policy get_policy(const char *s);
     JJ::LAYER_TYPE string_to_layer_type(const std::string& type);
 
 
