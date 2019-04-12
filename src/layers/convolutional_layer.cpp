@@ -1,4 +1,4 @@
-#include "convolutional_layer.h"
+﻿#include "convolutional_layer.h"
 
 NS_JJ_BEGIN
 static inline ACTIVATION get_activation(const std::string& s)
@@ -746,10 +746,12 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
     for (i = 0; i < l.outputs*l.batch; ++i)
         l.output[i] = 0;
 
+    // 是否支持 二值化卷积网络(xnor-net)
     if (m_conv.xnor)
     {
         if (!m_conv.align_bit_weights)
         {
+            // 把+,-,x操作简化成+,- 
             binarize_weights(m_weight.weights, l.n, l.c*l.size*l.size, m_weight.binary_weights);
             //printf("\n binarize_weights l.align_bit_weights = %p \n", l.align_bit_weights);
         }
@@ -766,7 +768,7 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
     // l.size - width and height of filters (the same size for all filters)
 
 
-    // 1. Convolution !!!
+    // 1. Convolution !!! 图片用卷积核矩阵来过滤
 
     int m = l.n;
     int k = l.size*l.size*l.c;
@@ -869,7 +871,7 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
 
     int const out_size = out_h * out_w;
 
-    // 2. Batch normalization
+    // 2. Batch normalization 批量归一化
     if (m_conv.batch_normalize) {
         int b;
         for (b = 0; b < l.batch; b++) {
