@@ -1,7 +1,7 @@
 /************************************************************************/
 /*
 @author:  junliang
-@brief:   convolution layer
+@brief:   convolution LayerData
 @time:    2019/02/22
 */
 /************************************************************************/
@@ -73,7 +73,7 @@ struct ConvolutionWeight
 
 
 
-typedef layer convolutional_layer;
+typedef LayerData convolutional_layer;
 class ConvolutionLayer : public ILayer
 {
 public:

@@ -138,7 +138,7 @@ void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float 
 }
 
 
-// fuse convolutional and batch_norm weights into one convolutional-layer
+// fuse convolutional and batch_norm weights into one convolutional-LayerData
 void Detector::yolov2_fuse_conv_batchnorm(network* net)
 {
     int j;
@@ -147,15 +147,15 @@ void Detector::yolov2_fuse_conv_batchnorm(network* net)
     for (j = 0; j < net->n; ++j)
     {
         ILayer* pLayer = net->jjLayers[j];
-        layer *l = pLayer->getLayer();
+        LayerData *l = pLayer->getLayer();
         if (pLayer->getType() == CONVOLUTIONAL)
         {
-            printf(" Fuse Convolutional layer \t\t l->size = %d  \n", l->size);
+            printf(" Fuse Convolutional LayerData \t\t l->size = %d  \n", l->size);
             ConvolutionLayer* pConv = (ConvolutionLayer*)pLayer;
             pConv->fuse_batchnorm();
         }
         else {
-            printf(" Skip layer: %d \n", pLayer->getType());
+            printf(" Skip LayerData: %d \n", pLayer->getType());
         }
     }  
 }
@@ -166,7 +166,7 @@ void Detector::calculate_binary_weights(network* net)
     for (j = 0; j < net->n; ++j)
     {
         ILayer* pLayer = net->jjLayers[j];
-        layer *l = pLayer->getLayer();
+        LayerData *l = pLayer->getLayer();
         if (pLayer->getType() == CONVOLUTIONAL)
         {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
@@ -203,11 +203,11 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
     //ImageInfo **alphabet = load_alphabet();            // image.c
     ImageInfo **alphabet = NULL;
 
-    // 1. read config file, like convolution layer
+    // 1. read config file, like convolution LayerData
     network* net = readConfigFile(cfgfile, 1);    // parser.c
     if (weightfile)
     {
-        // 2. read weight file, init the layer information in the network. cutoff == net.n, means do not cut off any layer
+        // 2. read weight file, init the LayerData information in the network. cutoff == net.n, means do not cut off any LayerData
         readWeightFile(net, weightfile, net->n);
     }
 
@@ -267,7 +267,7 @@ void Detector::fill_network_boxes(network *net, int w, int h, float thresh, floa
     for (j = 0; j < net->n; ++j)
     {
         ILayer* pLayer = net->jjLayers[j];
-        layer* l = pLayer->getLayer();
+        LayerData* l = pLayer->getLayer();
         if (pLayer->getType() == YOLO)
         {
             YoloLayer* pYoloLayer = (YoloLayer*)pLayer;
@@ -279,7 +279,7 @@ void Detector::fill_network_boxes(network *net, int w, int h, float thresh, floa
 
 int yolo_num_detections(YoloLayer* pLayer, float thresh)
 {
-    layer* pLayerInfo = pLayer->getLayer();
+    LayerData* pLayerInfo = pLayer->getLayer();
 
     int i, n;
     int count = 0;
@@ -307,7 +307,7 @@ int num_detections(network *net, float thresh)
     for (i = 0; i < net->n; ++i)
     {
         ILayer* pLayer = net->jjLayers[i];
-        layer* pLayerInfo = pLayer->getLayer();
+        LayerData* pLayerInfo = pLayer->getLayer();
         if (pLayer->getType() == YOLO)
         {
             YoloLayer* pYolo = (YoloLayer*)pLayer;
@@ -323,12 +323,12 @@ int num_detections(network *net, float thresh)
 
 detection *make_network_boxes(network *net, float thresh, int *num)
 {
-    ILayer* pLayer = net->jjLayers[net->n - 1]; // the last layer always yolo
+    ILayer* pLayer = net->jjLayers[net->n - 1]; // the last LayerData always yolo
     if (pLayer->getType() != YOLO)
         return nullptr;
 
     YoloLayer* pYolo = (YoloLayer*)pLayer;
-    layer* pLayerInfo = pLayer->getLayer();
+    LayerData* pLayerInfo = pLayer->getLayer();
     int i;
     int nboxes = num_detections(net, thresh);
     if (num) *num = nboxes;
@@ -401,7 +401,7 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch)
         return nullptr;
     
     JJ::network* pNetWork = new JJ::network;
-    pNetWork->n = parser.GetSectionCount() - 1; //  layer count
+    pNetWork->n = parser.GetSectionCount() - 1; //  LayerData count
     pNetWork->seen = (uint64_t*)calloc(1, sizeof(uint64_t));
     
     
@@ -480,12 +480,12 @@ JJ::network* Detector::readConfigFile(const char* filename, int batch)
         if (!pLayer->load(&parser, sectionIndex, params))
             return nullptr;
 
-        layer* pLayerInfo = pLayer->getLayer();
+        LayerData* pLayerInfo = pLayer->getLayer();
         pLayerInfo->dontload = parser.ReadInteger(sectionIndex, "dontload", 0);
         pLayerInfo->dontloadscales = parser.ReadInteger(sectionIndex, "dontloadscales", 0);
         //option_unused(options);
 
-        // save this layer
+        // save this LayerData
         pNetWork->jjLayers.push_back(pLayer);
 
         if (pLayerInfo->workspace_size > workspace_size)

@@ -1,9 +1,9 @@
 #include "maxpool_layer.h"
 
 NS_JJ_BEGIN
-layer MaxpoolLayer::make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding)
+LayerData MaxpoolLayer::make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding)
 {
-    layer l = { 0 };
+    LayerData l = { 0 };
     l.batch = batch;
     l.h = h;
     l.w = w;
@@ -40,9 +40,9 @@ bool MaxpoolLayer::load(const IniParser* pParser, int section, size_params param
     c = params.c;
     batch = params.batch;
     if (!(h && w && c))
-        return false;// error("Layer before maxpool layer must output image.");
+        return false;// error("Layer before maxpool LayerData must output image.");
 
-    m_layerInfo = make_maxpool_layer(batch, h, w, c, size, stride, padding);
+    m_ld = make_maxpool_layer(batch, h, w, c, size, stride, padding);
     setType(MAXPOOL);
     return true;
 }
@@ -91,7 +91,7 @@ void forward_maxpool_layer_avx(float *src, float *dst, int* indexes, int size, i
 
 void MaxpoolLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
 
     if (!train)
     {

@@ -102,24 +102,24 @@ void ConvolutionLayer::activate_array(float *x, const int n, const ACTIVATION a)
 bool ConvolutionLayer::load(const IniParser* pParser, int section, size_params params)
 {
     if (!(params.h && params.w && params.c))
-        return false;// ("Layer before convolutional layer must output image.");
+        return false;// ("Layer before convolutional LayerData must output image.");
 
 
-    m_layerInfo.n = pParser->ReadInteger(section, "filters", 1);
-    m_layerInfo.size = pParser->ReadInteger(section, "size", 1);
-    m_layerInfo.stride = pParser->ReadInteger(section, "stride", 1);
-    m_layerInfo.pad = pParser->ReadInteger(section, "padding", 0);
+    m_ld.n = pParser->ReadInteger(section, "filters", 1);
+    m_ld.size = pParser->ReadInteger(section, "size", 1);
+    m_ld.stride = pParser->ReadInteger(section, "stride", 1);
+    m_ld.pad = pParser->ReadInteger(section, "padding", 0);
     int pad = pParser->ReadInteger(section, "pad", 0);
     if (pad)
-        m_layerInfo.pad = m_layerInfo.size / 2;
+        m_ld.pad = m_ld.size / 2;
 
     std::string activation_s = pParser->ReadString(section, "activation", "logistic");
     m_conv.activation = get_activation(activation_s);
 
-    m_layerInfo.h = params.h;
-    m_layerInfo.w = params.w;
-    m_layerInfo.c = params.c;
-    m_layerInfo.batch = params.batch;
+    m_ld.h = params.h;
+    m_ld.w = params.w;
+    m_ld.c = params.c;
+    m_ld.batch = params.batch;
 
     m_conv.batch_normalize = pParser->ReadInteger(section, "batch_normalize", 0);
     m_conv.binary = pParser->ReadInteger(section, "binary", 0);
@@ -159,7 +159,7 @@ int convolutional_out_width(convolutional_layer l)
 
 size_t ConvolutionLayer::get_workspace_size()
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
     if (m_conv.xnor)
         return (size_t)m_conv.bit_align*l.size*l.size*l.c * sizeof(float);
 
@@ -171,68 +171,68 @@ void ConvolutionLayer::make_convolutional_layer()
     int i;
     
     setType(CONVOLUTIONAL);
-    //m_layerInfo.quantized = quantized;
+    //m_ld.quantized = quantized;
 
-    int weightsSize = m_layerInfo.c * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size;
+    int weightsSize = m_ld.c * m_ld.n * m_ld.size*m_ld.size;
     m_weight.weights = (float*)calloc(weightsSize, sizeof(float));
-    m_weight.biases = (float*)calloc(m_layerInfo.n, sizeof(float));
+    m_weight.biases = (float*)calloc(m_ld.n, sizeof(float));
 
-    float scale = sqrt(2. / (m_layerInfo.size * m_layerInfo.size * m_layerInfo.c));
+    float scale = sqrt(2. / (m_ld.size * m_ld.size * m_ld.c));
     for (i = 0; i < weightsSize; ++i)
         m_weight.weights[i] = scale * rand_uniform(-1, 1) ;
 
-    int out_h = convolutional_out_height(m_layerInfo);
-    int out_w = convolutional_out_width(m_layerInfo);
-    m_layerInfo.out_h = out_h;
-    m_layerInfo.out_w = out_w;
-    m_layerInfo.out_c = m_layerInfo.n;
-    m_layerInfo.outputs = m_layerInfo.out_h * m_layerInfo.out_w * m_layerInfo.out_c;
-    m_layerInfo.inputs = m_layerInfo.w * m_layerInfo.h * m_layerInfo.c;
+    int out_h = convolutional_out_height(m_ld);
+    int out_w = convolutional_out_width(m_ld);
+    m_ld.out_h = out_h;
+    m_ld.out_w = out_w;
+    m_ld.out_c = m_ld.n;
+    m_ld.outputs = m_ld.out_h * m_ld.out_w * m_ld.out_c;
+    m_ld.inputs = m_ld.w * m_ld.h * m_ld.c;
 
-    m_layerInfo.output = (float*)calloc(m_layerInfo.batch * m_layerInfo.outputs, sizeof(float));
+    m_ld.output = (float*)calloc(m_ld.batch * m_ld.outputs, sizeof(float));
 
     if (m_conv.binary)
     {
         m_weight.binary_weights = (float*)calloc (weightsSize, sizeof(float));
-        m_weight.scales = (float*)calloc(m_layerInfo.n, sizeof(float));
+        m_weight.scales = (float*)calloc(m_ld.n, sizeof(float));
     }
 
     if (m_conv.xnor)
     {
         m_weight.binary_weights = (float*)calloc(weightsSize, sizeof(float));
-        m_weight.binary_input = (float*)calloc(m_layerInfo.inputs*m_layerInfo.batch, sizeof(float));
+        m_weight.binary_input = (float*)calloc(m_ld.inputs*m_ld.batch, sizeof(float));
 
         int align = 32;// 8;
-        int src_align = m_layerInfo.out_h*m_layerInfo.out_w;
+        int src_align = m_ld.out_h*m_ld.out_w;
         m_conv.bit_align = src_align + (align - src_align % align);
 
-        m_conv.mean_arr = (float*)calloc(m_layerInfo.n, sizeof(float));
+        m_conv.mean_arr = (float*)calloc(m_ld.n, sizeof(float));
     }
 
     if (m_conv.batch_normalize)
     {
-        m_weight.scales = (float*)calloc(m_layerInfo.n, sizeof(float));
-        for (i = 0; i < m_layerInfo.n; ++i)
+        m_weight.scales = (float*)calloc(m_ld.n, sizeof(float));
+        for (i = 0; i < m_ld.n; ++i)
         {
             m_weight.scales[i] = 1;
         }
 
 
-        m_weight.rolling_mean = (float*)calloc(m_layerInfo.n, sizeof(float));
-        m_weight.rolling_variance = (float*)calloc(m_layerInfo.n, sizeof(float));
+        m_weight.rolling_mean = (float*)calloc(m_ld.n, sizeof(float));
+        m_weight.rolling_variance = (float*)calloc(m_ld.n, sizeof(float));
     }
 
 
-    m_layerInfo.workspace_size = get_workspace_size();
+    m_ld.workspace_size = get_workspace_size();
 
-    m_conv.bflops = (2.0 * m_layerInfo.n * m_layerInfo.size*m_layerInfo.size*m_layerInfo.c * m_layerInfo.out_h*m_layerInfo.out_w) / 1000000000.;
+    m_conv.bflops = (2.0 * m_ld.n * m_ld.size*m_ld.size*m_ld.c * m_ld.out_h*m_ld.out_w) / 1000000000.;
     if (m_conv.xnor && m_conv.use_bin_output) fprintf(stderr, "convXB");
     else if (m_conv.xnor) fprintf(stderr, "convX ");
     else fprintf(stderr, "conv  ");
 
     fprintf(stderr, "%5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d %5.3f BF\n",
-        m_layerInfo.n, m_layerInfo.size, m_layerInfo.size, m_layerInfo.stride, m_layerInfo.w, m_layerInfo.h, m_layerInfo.c,
-        m_layerInfo.out_w, m_layerInfo.out_h, m_layerInfo.out_c, m_conv.bflops);
+        m_ld.n, m_ld.size, m_ld.size, m_ld.stride, m_ld.w, m_ld.h, m_ld.c,
+        m_ld.out_w, m_ld.out_h, m_ld.out_c, m_conv.bflops);
 }
 
 
@@ -243,7 +243,7 @@ void ConvolutionLayer::make_convolutional_layer()
 
 void ConvolutionLayer::fuse_batchnorm()
 {
-    layer* l = getLayer();
+    LayerData* l = getLayer();
     if (getConv()->batch_normalize)
     {
         int f;
@@ -693,10 +693,13 @@ void gemm_nn(int M, int N, int K, float ALPHA,
     float *C, int ldc)
 {
     int i, j, k;
-    for (i = 0; i < M; ++i) {
-        for (k = 0; k < K; ++k) {
+    for (i = 0; i < M; ++i)
+    {
+        for (k = 0; k < K; ++k)
+        {
             register float A_PART = ALPHA * A[i*lda + k];
-            for (j = 0; j < N; ++j) {
+            for (j = 0; j < N; ++j)
+            {
                 C[i*ldc + j] += A_PART * B[k*ldb + j];
             }
         }
@@ -735,9 +738,10 @@ void float_to_bit(float *src, unsigned char *dst, size_t size)
 
 
 
+// output = active * ( input vector * weight matrix + bias)
 void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
     int out_h = (l.h + 2 * l.pad - l.size) / l.stride + 1;    // output_height=input_height for stride=1 and pad=1
     int out_w = (l.w + 2 * l.pad - l.size) / l.stride + 1;    // output_width=input_width for stride=1 and pad=1
     int i, f, j;
@@ -761,7 +765,7 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
         input = m_weight.binary_input;
     }
 
-    // l.n - number of filters on this layer
+    // l.n - number of filters on this LayerData
     // l.c - channels of input-array
     // l.h - height of input-array
     // l.w - width of input-array
@@ -856,10 +860,13 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
             }
         }
         else {
+            // from w,h,c, get vector b
             im2col_cpu_custom(input, l.c, l.h, l.w, l.size, l.stride, l.pad, b);    // AVX2
             int t;
 #pragma omp parallel for
-            for (t = 0; t < m; ++t) {
+            for (t = 0; t < m; ++t) // how many filters, get the depth
+            {
+                // every filter
                 gemm_nn(1, n, k, 1, a + t * k, k, b, n, c + t * n, n);
             }
         }
@@ -871,12 +878,16 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
 
     int const out_size = out_h * out_w;
 
-    // 2. Batch normalization 批量归一化
-    if (m_conv.batch_normalize) {
+    // 2. Batch normalization 批量归一化， let the output value between 0-1, then every LayerData can have the same range.
+    if (m_conv.batch_normalize)
+    {
         int b;
-        for (b = 0; b < l.batch; b++) {
-            for (f = 0; f < l.out_c; ++f) {
-                for (i = 0; i < out_size; ++i) {
+        for (b = 0; b < l.batch; b++)
+        {
+            for (f = 0; f < l.out_c; ++f)
+            {
+                for (i = 0; i < out_size; ++i)
+                {
                     int index = f * out_size + i;
                     l.output[index + b * l.outputs] = (l.output[index + b * l.outputs] - m_weight.rolling_mean[f]) / (sqrtf(m_weight.rolling_variance[f]) + .000001f);
                 }
@@ -894,14 +905,13 @@ void ConvolutionLayer::forward_layer_cpu(JJ::network* pNet, float *input, int tr
     // 3. Add BIAS
     //if (l.batch_normalize)
     {
-        int b;
-        for (b = 0; b < l.batch; b++)
-        for (i = 0; i < l.n; ++i)
-        for (j = 0; j < out_size; ++j)
+        for (int b = 0; b < l.batch; b++)
+        for (int i = 0; i < l.n; ++i)
+        for (int j = 0; j < out_size; ++j)
              l.output[i*out_size + j + b * l.outputs] += m_weight.biases[i];
     }
 
-    // 4. Activation function (LEAKY or LINEAR)
+    // 4. Activation function (LEAKY or LINEAR),   make the output value range into 0-1
     //if (l.activation == LEAKY) {
     //    for (i = 0; i < l.n*out_size; ++i) {
     //        l.output[i] = leaky_activate(l.output[i]);
@@ -927,7 +937,7 @@ void get_mean_array(float *src, size_t size, size_t filters, float *mean_arr) {
 
 void ConvolutionLayer::binary_align_weights()
 {
-    layer* l = &m_layerInfo;
+    LayerData* l = &m_ld;
 
     int m = l->n;
     int k = l->size*l->size*l->c;
@@ -1003,7 +1013,7 @@ void ConvolutionLayer::binary_align_weights()
 
 void ConvolutionLayer::load_convolutional_weights_cpu(FILE *fp)
 {
-    layer* pLayerInfo = &m_layerInfo;
+    LayerData* pLayerInfo = &m_ld;
     ConvolutionWeight* pWeight = &m_weight;
     int num = pLayerInfo->n * pLayerInfo->c * pLayerInfo->size * pLayerInfo->size;
     int n = pLayerInfo->n;

@@ -25,8 +25,8 @@ enum learning_rate_policy
 
 struct network
 {
-    float* workspace;
-    int n;  // layer count
+    float* workspace;   // save the data and transfer between layers
+    int n;  // LayerData count
 
     int batch;
     std::vector<ILayer*> jjLayers;

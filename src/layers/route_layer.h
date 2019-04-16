@@ -1,7 +1,7 @@
 /************************************************************************/
 /*
 @author:  junliang
-@brief:   convolution layer
+@brief:   convolution LayerData
 @time:    2019/02/22
 */
 /************************************************************************/
@@ -25,7 +25,7 @@ public:
     virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train);
 
 private:
-    layer make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes);
+    LayerData make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes);
 private:
     std::vector<int> m_input_layers; // route
     std::vector<int> m_input_sizes; // route 

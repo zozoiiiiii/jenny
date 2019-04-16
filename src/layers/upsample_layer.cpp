@@ -5,9 +5,9 @@ NS_JJ_BEGIN
 UpsampleLayer::UpsampleLayer():m_scale(0),m_reverse(0)
 {}
 
-layer UpsampleLayer::make_upsample_layer(int batch, int w, int h, int c, int stride)
+LayerData UpsampleLayer::make_upsample_layer(int batch, int w, int h, int c, int stride)
 {
-    layer l = { 0 };
+    LayerData l = { 0 };
     l.batch = batch;
     l.w = w;
     l.h = h;
@@ -38,24 +38,24 @@ layer UpsampleLayer::make_upsample_layer(int batch, int w, int h, int c, int str
 bool UpsampleLayer::load(const IniParser* pParser, int section, size_params params)
 {
     int stride = pParser->ReadInteger(section, "stride", 2);
-    m_layerInfo = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
+    m_ld = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
     setType(UPSAMPLE);
     m_scale = pParser->ReadFloat(section, "scale", 1);
-    //return layer;
+    //return LayerData;
     return true;
 }
 
 
-void UpsampleLayer::resize_upsample_layer(layer *l, int w, int h)
+void UpsampleLayer::resize_upsample_layer(LayerData *l, int w, int h)
 {
   
 }
 
-void UpsampleLayer::forward_upsample_layer(const layer l, network net)
+void UpsampleLayer::forward_upsample_layer(const LayerData l, network net)
 {
 }
 
-void UpsampleLayer::backward_upsample_layer(const layer l, network net)
+void UpsampleLayer::backward_upsample_layer(const LayerData l, network net)
 {
    
 }
@@ -85,7 +85,7 @@ void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int for
 
 void UpsampleLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
     if (m_reverse)
     {

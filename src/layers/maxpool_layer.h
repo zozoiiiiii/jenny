@@ -1,7 +1,7 @@
 /************************************************************************/
 /*
 @author:  junliang
-@brief:   convolution layer
+@brief:   convolution LayerData
 @time:    2019/02/22
 */
 /************************************************************************/
@@ -24,10 +24,10 @@ public:
     virtual bool load(const IniParser* pParser, int section, size_params params);
     virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train);
 private:
-    layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding);
+    LayerData make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding);
 
 private:
-    int* m_indexes; // maxpoll layer
+    int* m_indexes; // maxpoll LayerData
 };
 
 NS_JJ_END

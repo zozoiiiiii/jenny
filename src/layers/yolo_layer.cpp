@@ -4,10 +4,10 @@
 
 NS_JJ_BEGIN
 
-layer YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes)
+LayerData YoloLayer::make_yolo_layer(int batch, int w, int h, int n, int total, std::vector<int> mask, int classes, int max_boxes)
 {
     int i;
-    layer l = { 0 };
+    LayerData l = { 0 };
     l.n = n;
     //l.total = total;
     l.batch = batch;
@@ -78,12 +78,12 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
     num = mask.size();
 
     int max_boxes = pParser->ReadInteger(section, "max", 90);
-    m_layerInfo = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
+    m_ld = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
     setType(YOLO);
-    if (m_layerInfo.outputs != params.inputs)
+    if (m_ld.outputs != params.inputs)
     {
-        printf("Error: layer.outputs == params.inputs \n");
-        printf("filters= in the [convolutional]-layer doesn't correspond to classes= or mask= in [yolo]-layer \n");
+        printf("Error: LayerData.outputs == params.inputs \n");
+        printf("filters= in the [convolutional]-LayerData doesn't correspond to classes= or mask= in [yolo]-LayerData \n");
         return false;
     }
 
@@ -104,16 +104,16 @@ bool YoloLayer::load(const IniParser* pParser, int section, size_params params)
 
 int YoloLayer::entry_index(int batch, int location, int entry)
 {
-    int n = location / (m_layerInfo.w*m_layerInfo.h);
-    int loc = location % (m_layerInfo.w*m_layerInfo.h);
-    return batch * m_layerInfo.outputs + n * m_layerInfo.w*m_layerInfo.h*(4 + m_classes + 1)
-        + entry * m_layerInfo.w*m_layerInfo.h + loc;
+    int n = location / (m_ld.w*m_ld.h);
+    int loc = location % (m_ld.w*m_ld.h);
+    return batch * m_ld.outputs + n * m_ld.w*m_ld.h*(4 + m_classes + 1)
+        + entry * m_ld.w*m_ld.h + loc;
 }
 
 
 void YoloLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
 
     int b, n;
     memcpy(l.output, input, l.outputs*l.batch * sizeof(float));
@@ -183,7 +183,7 @@ box get_yolo_box(float *x, const std::vector<float>& biases, int n, int index, i
 
 int YoloLayer::get_yolo_detections(int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
 
     int i, j, n;
     float *predictions = l.output;

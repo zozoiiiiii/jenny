@@ -2,10 +2,10 @@
 
 NS_JJ_BEGIN
 
-layer RouteLayer::make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes)
+LayerData RouteLayer::make_route_layer(int batch, int n, std::vector<int> input_layers, std::vector<int> input_sizes)
 {
     fprintf(stderr, "route ");
-    layer l = { 0 };
+    LayerData l = { 0 };
     l.batch = batch;
     l.n = n;
     m_input_layers = input_layers;
@@ -47,27 +47,27 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
 
     int batch = params.batch;
 
-    m_layerInfo = make_route_layer(batch, nSize, layers, sizes);
+    m_ld = make_route_layer(batch, nSize, layers, sizes);
     setType(ROUTE);
 
-    JJ::layer* first = params.net->jjLayers[layers[0]]->getLayer();
-    m_layerInfo.out_w = first->out_w;
-    m_layerInfo.out_h = first->out_h;
-    m_layerInfo.out_c = first->out_c;
+    JJ::LayerData* first = params.net->jjLayers[layers[0]]->getLayer();
+    m_ld.out_w = first->out_w;
+    m_ld.out_h = first->out_h;
+    m_ld.out_c = first->out_c;
     for (int i = 1; i < nSize; ++i)
     {
         int index = layers[i];
-        JJ::layer* next = params.net->jjLayers[index]->getLayer();
+        JJ::LayerData* next = params.net->jjLayers[index]->getLayer();
         if (next->out_w == first->out_w && next->out_h == first->out_h)
         {
-            m_layerInfo.out_c += next->out_c;
+            m_ld.out_c += next->out_c;
         }
         else
         {
-            m_layerInfo.out_h = m_layerInfo.out_w = m_layerInfo.out_c = 0;
+            m_ld.out_h = m_ld.out_w = m_ld.out_c = 0;
         }
     }
-    //return layer;
+    //return LayerData;
     return true;
 }
 
@@ -75,16 +75,16 @@ bool RouteLayer::load(const IniParser* pParser, int section, size_params params)
 
 void RouteLayer::forward_layer_cpu(JJ::network* pNet, float *input, int train)
 {
-    layer& l = m_layerInfo;
+    LayerData& l = m_ld;
 
     int i, j;
     int offset = 0;
     // number of merged layers
     for (i = 0; i < l.n; ++i) {
-        int index = m_input_layers[i];                    // source layer index
+        int index = m_input_layers[i];                    // source LayerData index
         ILayer* pLayer = pNet->jjLayers[index];
-        float *input = pLayer->getLayer()->output;    // source layer output ptr
-        int input_size = m_input_sizes[i];                // source layer size
+        float *input = pLayer->getLayer()->output;    // source LayerData output ptr
+        int input_size = m_input_sizes[i];                // source LayerData size
                                                         // batch index
         for (j = 0; j < l.batch; ++j) {
             memcpy(l.output + offset + j * l.outputs, input + j * input_size, input_size * sizeof(float));

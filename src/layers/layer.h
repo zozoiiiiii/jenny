@@ -59,7 +59,7 @@ typedef enum {
 
 
 
-struct layer
+struct LayerData
 {
     int batch;
     int inputs;
@@ -75,7 +75,7 @@ struct layer
     int stride;
     int pad;
 
-    int dontload;   // this conv layer not need to load weight information
+    int dontload;   // this conv LayerData not need to load weight information
     int dontloadscales;
 
     float* output;  // con, yolo, maxpool, route, upsample
@@ -101,18 +101,22 @@ class ILayer
 {
 public:
     virtual bool load(const IniParser* pParser, int section, size_params params) = 0;
+
+    // used for detect
     virtual void forward_layer_cpu(JJ::network* pNet, float *input, int train) {}
+
+    // used for train
     //virtual void backward_layer_cpu(JJ::network* pNet, float *input, int train) {}
     //virtual void update_layer_cpu(JJ::network* pNet, float *input, int train) {}
 
 
-    layer* getLayer() { return &m_layerInfo; }
+    LayerData* getLayer() { return &m_ld; }
 
     LAYER_TYPE getType() { return m_type; }
     void setType(LAYER_TYPE lt) { m_type = lt; }
 
 protected:
-    layer m_layerInfo;
+    LayerData m_ld;
     LAYER_TYPE m_type;
 };
 
