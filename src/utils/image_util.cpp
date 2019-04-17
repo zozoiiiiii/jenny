@@ -11,16 +11,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../stb_image_write.h"
 
-// namespace
-#ifndef NS_JJ_BEGIN
-#define NS_JJ_BEGIN                     namespace JJ {
-#define NS_JJ_END                       }
-#define USING_NS_JJ                     using namespace JJ;
-#endif
 
-NS_JJ_BEGIN
 
-void ImageUtil::rgbgr_image(ImageInfo im)
+void ImageUtil::rgbgr_image(ImageData im)
 {
     int i;
     for (i = 0; i < im.w*im.h; ++i)
@@ -31,9 +24,9 @@ void ImageUtil::rgbgr_image(ImageInfo im)
     }
 }
 
-ImageInfo ImageUtil::make_empty_image(int w, int h, int c)
+ImageUtil::ImageData ImageUtil::make_empty_image(int w, int h, int c)
 {
-    ImageInfo out;
+    ImageData out;
     out.data = 0;
     out.h = h;
     out.w = w;
@@ -41,7 +34,7 @@ ImageInfo ImageUtil::make_empty_image(int w, int h, int c)
     return out;
 }
 
-void ImageUtil::free_image(ImageInfo m)
+void ImageUtil::free_image(ImageData m)
 {
     if (m.data) {
         free(m.data);
@@ -49,7 +42,7 @@ void ImageUtil::free_image(ImageInfo m)
 }
 
 // image.c
-void ImageUtil::draw_box(ImageInfo a, int x1, int y1, int x2, int y2, float r, float g, float b)
+void ImageUtil::draw_box(ImageData a, int x1, int y1, int x2, int y2, float r, float g, float b)
 {
     //normalize_image(a);
     int i;
@@ -86,7 +79,7 @@ void ImageUtil::draw_box(ImageInfo a, int x1, int y1, int x2, int y2, float r, f
 }
 
 // image.c
-void ImageUtil::draw_box_width(ImageInfo a, int x1, int y1, int x2, int y2, int w, float r, float g, float b)
+void ImageUtil::draw_box_width(ImageData a, int x1, int y1, int x2, int y2, int w, float r, float g, float b)
 {
     int i;
     for (i = 0; i < w; ++i) {
@@ -95,22 +88,22 @@ void ImageUtil::draw_box_width(ImageInfo a, int x1, int y1, int x2, int y2, int 
 }
 
 // image.c
-ImageInfo ImageUtil::make_image(int w, int h, int c)
+ImageUtil::ImageData ImageUtil::make_image(int w, int h, int c)
 {
-    ImageInfo out = make_empty_image(w, h, c);
+    ImageData out = make_empty_image(w, h, c);
     out.data = (float*)calloc(h*w*c, sizeof(float));
     return out;
 }
 
 // image.c
-float ImageUtil::get_pixel(ImageInfo m, int x, int y, int c)
+float ImageUtil::get_pixel(ImageData m, int x, int y, int c)
 {
     assert(x < m.w && y < m.h && c < m.c);
     return m.data[c*m.h*m.w + y * m.w + x];
 }
 
 // image.c
-void ImageUtil::set_pixel(ImageInfo m, int x, int y, int c, float val)
+void ImageUtil::set_pixel(ImageData m, int x, int y, int c, float val)
 {
     if (x < 0 || y < 0 || c < 0 || x >= m.w || y >= m.h || c >= m.c) return;
     assert(x < m.w && y < m.h && c < m.c);
@@ -118,17 +111,17 @@ void ImageUtil::set_pixel(ImageInfo m, int x, int y, int c, float val)
 }
 
 // image.c
-void ImageUtil::add_pixel(ImageInfo m, int x, int y, int c, float val)
+void ImageUtil::add_pixel(ImageData m, int x, int y, int c, float val)
 {
     assert(x < m.w && y < m.h && c < m.c);
     m.data[c*m.h*m.w + y * m.w + x] += val;
 }
 
 // image.c
-ImageInfo ImageUtil::resize_image(ImageInfo im, int w, int h)
+ImageUtil::ImageData ImageUtil::resize_image(ImageData im, int w, int h)
 {
-    ImageInfo resized = make_image(w, h, im.c);
-    ImageInfo part = make_image(w, im.h, im.c);
+    ImageData resized = make_image(w, h, im.c);
+    ImageData part = make_image(w, im.h, im.c);
     int r, c, k;
     float w_scale = (float)(im.w - 1) / (w - 1);
     float h_scale = (float)(im.h - 1) / (h - 1);
@@ -171,16 +164,16 @@ ImageInfo ImageUtil::resize_image(ImageInfo im, int w, int h)
 }
 
 // image.c
-ImageInfo ImageUtil::load_image(char *filename, int w, int h, int c)
+ImageUtil::ImageData ImageUtil::load_image(char *filename, int w, int h, int c)
 {
 #ifdef OPENCV
-    ImageInfo out = load_image_cv(filename, c);
+    ImageData out = load_image_cv(filename, c);
 #else
-    ImageInfo out = load_image_stb(filename, c);
+    ImageData out = load_image_stb(filename, c);
 #endif
 
     if ((h && w) && (h != out.h || w != out.w)) {
-        ImageInfo resized = resize_image(out, w, h);
+        ImageData resized = resize_image(out, w, h);
         free_image(out);
         out = resized;
     }
@@ -188,17 +181,17 @@ ImageInfo ImageUtil::load_image(char *filename, int w, int h, int c)
 }
 
 // image.c
-ImageInfo ImageUtil::load_image_stb(char *filename, int channels)
+ImageUtil::ImageData ImageUtil::load_image_stb(char *filename, int channels)
 {
     int w, h, c;
     unsigned char *data = stbi_load(filename, &w, &h, &c, channels);
     if (!data) {
-        fprintf(stderr, "Cannot load ImageInfo \"%s\"\nSTB Reason: %s\n", filename, stbi_failure_reason());
+        fprintf(stderr, "Cannot load ImageData \"%s\"\nSTB Reason: %s\n", filename, stbi_failure_reason());
         exit(0);
     }
     if (channels) c = channels;
     int i, j, k;
-    ImageInfo im = make_image(w, h, c);
+    ImageData im = make_image(w, h, c);
     for (k = 0; k < c; ++k) {
         for (j = 0; j < h; ++j) {
             for (i = 0; i < w; ++i) {
@@ -214,16 +207,16 @@ ImageInfo ImageUtil::load_image_stb(char *filename, int channels)
 
 
 // image.c
-ImageInfo ImageUtil::copy_image(ImageInfo p)
+ImageUtil::ImageData ImageUtil::copy_image(ImageData p)
 {
-    ImageInfo copy = p;
+    ImageUtil::ImageData copy = p;
     copy.data = (float*)calloc(p.h*p.w*p.c, sizeof(float));
     memcpy(copy.data, p.data, p.h*p.w*p.c * sizeof(float));
     return copy;
 }
 
 // image.c
-void ImageUtil::constrain_image(ImageInfo im)
+void ImageUtil::constrain_image(ImageData im)
 {
     int i;
     for (i = 0; i < im.w*im.h*im.c; ++i) {
@@ -233,7 +226,7 @@ void ImageUtil::constrain_image(ImageInfo im)
 }
 
 // image.c
-void ImageUtil::save_image_png(ImageInfo im, const char *name)
+void ImageUtil::save_image_png(ImageData im, const char *name)
 {
     char buff[256];
     sprintf(buff, "%s.png", name);
@@ -246,12 +239,12 @@ void ImageUtil::save_image_png(ImageInfo im, const char *name)
     }
     int success = stbi_write_png(buff, im.w, im.h, im.c, data, im.w*im.c);
     free(data);
-    if (!success) fprintf(stderr, "Failed to write ImageInfo %s\n", buff);
+    if (!success) fprintf(stderr, "Failed to write ImageData %s\n", buff);
 }
 
 
 // image.c
-void ImageUtil::show_image(ImageInfo p, const char *name)
+void ImageUtil::show_image(ImageData p, const char *name)
 {
 #ifdef OPENCV
     show_image_cv(p, name);
@@ -273,4 +266,3 @@ float ImageUtil::get_color(int c, int x, int max)
     //printf("%f\n", r);
     return r;
 }
-NS_JJ_END

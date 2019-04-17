@@ -66,7 +66,7 @@ int compare_by_probs(const void *a_ptr, const void *b_ptr)
     return delta < 0 ? -1 : delta > 0 ? 1 : 0;
 }
 
-void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output)
+void Detector::draw_detections_v3(ImageUtil::ImageData im, detection *dets, int num, float thresh, const std::vector<std::string>& names, ImageUtil::ImageData **alphabet, int classes, int ext_output)
 {
     int selected_detections_num;
     detection_with_class* selected_detections = get_actual_detections(dets, num, thresh, &selected_detections_num);
@@ -93,7 +93,7 @@ void Detector::draw_detections_v3(ImageInfo im, detection *dets, int num, float 
         }
     }
 
-    // ImageInfo output
+    // ImageData output
     qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_probs);
     for (i = 0; i < selected_detections_num; ++i) {
         int width = im.h * .006;
@@ -195,13 +195,13 @@ Detector* Detector::instance()
     return &s_detector;
 }
 
-bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int dont_show)
+bool Detector::test(const std::vector<std::string>& names, char *cfgfile, char *weightfile, char *filename, float thresh)
 {
     if (!filename)
         return false;
 
-    //ImageInfo **alphabet = load_alphabet();            // image.c
-    ImageInfo **alphabet = NULL;
+    //ImageData **alphabet = load_alphabet();            // image.c
+    ImageUtil::ImageData **alphabet = NULL;
 
     // 1. read config file, like convolution LayerData
     network* net = readConfigFile(cfgfile, 1);    // parser.c
@@ -228,8 +228,8 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
 
         // 3. open image
         strncpy(input, filename, 256);
-        ImageInfo im = ImageUtil::load_image(input, 0, 0, 3);            // image.c
-        ImageInfo sized = ImageUtil::resize_image(im, net->w, net->h);    // image.c
+        ImageUtil::ImageData im = ImageUtil::load_image(input, 0, 0, 3);            // image.c
+        ImageUtil::ImageData sized = ImageUtil::resize_image(im, net->w, net->h);    // image.c
 
 
         float *X = sized.data;
@@ -240,7 +240,7 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
 
         printf("%s: Predicted in %f seconds.\n", input, (float)(clock() - time) / CLOCKS_PER_SEC); //sec(clock() - time));
 
-        // 5. save to ImageInfo or show directly
+        // 5. save to ImageData or show directly
         float hier_thresh = 0.5;
         int ext_output = 1, letterbox = 0, nboxes = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
@@ -258,6 +258,15 @@ bool Detector::detectImage(char **names, char *cfgfile, char *weightfile, char *
         ImageUtil::free_image(im);                    // image.c
         ImageUtil::free_image(sized);                // image.c
         return true;
+
+}
+
+
+
+
+bool Detector::train(char **names, char *cfgfile, char *weightfile)
+{
+    return true;
 
 }
 

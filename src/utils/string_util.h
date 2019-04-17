@@ -13,7 +13,6 @@
 
 class StringUtil
 {
-
 public:
     static void splitString(std::vector<std::string>& result, const std::string& str, const std::string& delims);
     static void splitInt(std::vector<int>& result, const std::string& str, const std::string& delims);

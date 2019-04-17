@@ -11,11 +11,11 @@
 #include <iostream>
 
 
-namespace JJ {
 
-    // image.c
-
-    struct ImageInfo
+class ImageUtil
+{
+public:
+    struct ImageData
     {
         int h;
         int w;
@@ -23,29 +23,23 @@ namespace JJ {
         float *data;
     };
 
-    class ImageUtil
-    {
-    public:
+    static void rgbgr_image(ImageData im);
+    static ImageData make_empty_image(int w, int h, int c);
+    static void free_image(ImageData m);
+    static void draw_box(ImageData a, int x1, int y1, int x2, int y2, float r, float g, float b);
+    static void draw_box_width(ImageData a, int x1, int y1, int x2, int y2, int w, float r, float g, float b);
+    static ImageData make_image(int w, int h, int c);
+    static float get_pixel(ImageData m, int x, int y, int c);
+    static void set_pixel(ImageData m, int x, int y, int c, float val);
+    static ImageData resize_image(ImageData im, int w, int h);
+    static ImageData load_image(char *filename, int w, int h, int c);
+    static ImageData load_image_stb(char *filename, int channels);
+    static void save_image_png(ImageData im, const char *name);
+    static void show_image(ImageData p, const char *name);
 
-        static void rgbgr_image(ImageInfo im);
-        static ImageInfo make_empty_image(int w, int h, int c);
-        static void free_image(ImageInfo m);
-        static void draw_box(ImageInfo a, int x1, int y1, int x2, int y2, float r, float g, float b);
-        static void draw_box_width(ImageInfo a, int x1, int y1, int x2, int y2, int w, float r, float g, float b);
-        static ImageInfo make_image(int w, int h, int c);
-        static float get_pixel(ImageInfo m, int x, int y, int c);
-        static void set_pixel(ImageInfo m, int x, int y, int c, float val);
-        static ImageInfo resize_image(ImageInfo im, int w, int h);
-        static ImageInfo load_image(char *filename, int w, int h, int c);
-        static ImageInfo load_image_stb(char *filename, int channels);
-        static void save_image_png(ImageInfo im, const char *name);
-        static void show_image(ImageInfo p, const char *name);
+    static float get_color(int c, int x, int max);
 
-        static float get_color(int c, int x, int max);
-
-        static void add_pixel(ImageInfo m, int x, int y, int c, float val);
-        static ImageInfo copy_image(ImageInfo p);
-        static void constrain_image(ImageInfo im);
-    };
-
-}
+    static void add_pixel(ImageData m, int x, int y, int c, float val);
+    static ImageData copy_image(ImageData p);
+    static void constrain_image(ImageData im);
+};

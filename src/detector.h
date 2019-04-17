@@ -1,7 +1,7 @@
 /************************************************************************/
 /*
 @author:  junliang
-@brief:   
+@brief:
 @time:    2019/02/22
 */
 /************************************************************************/
@@ -29,13 +29,19 @@ class Detector
 {
 public:
     static Detector* instance();
-    bool detectImage(char **names, char *cfgfile, char *weightfile, char *filename, float thresh, int dont_show);
+    bool load(char **names, char *cfgfile, char *weightfile) { return false; }
+
+    // detect one image
+    bool test(const std::vector<std::string>& names, char *cfgfile, char *weightfile, char *filename, float thresh);
+
+    // train some images, get one weight file.
+    bool train(char **names, char *cfgfile, char *weightfile);
 
 private:
     JJ::network* readConfigFile(const char* cfgFile, int batch);
     bool readWeightFile(network *net, char *filename, int cutoff);
     bool parseNetOptions(const IniParser* pIniParser, JJ::network* pNetWork);
-    void draw_detections_v3(ImageInfo im, detection *dets, int num, float thresh, char **names, ImageInfo **alphabet, int classes, int ext_output);
+    void draw_detections_v3(ImageUtil::ImageData im, detection *dets, int num, float thresh, const std::vector<std::string>& names, ImageUtil::ImageData **alphabet, int classes, int ext_output);
     
 
     JJ::LAYER_TYPE string_to_layer_type(const std::string& type);
