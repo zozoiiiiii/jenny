@@ -32,10 +32,10 @@ public:
     bool load(char **names, char *cfgfile, char *weightfile) { return false; }
 
     // detect one image
-    bool test(const std::vector<std::string>& names, char *cfgfile, char *weightfile, char *filename, float thresh);
+    bool test(const char* datacfg, char *cfgfile, char *weightfile, char *filename, float thresh);
 
     // train some images, get one weight file.
-    bool train(char **names, char *cfgfile, char *weightfile);
+    bool train(const char* datacfg, char *cfgfile, char *weightfile);
 
 private:
     JJ::network* readConfigFile(const char* cfgFile, int batch);

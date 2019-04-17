@@ -195,8 +195,21 @@ Detector* Detector::instance()
     return &s_detector;
 }
 
-bool Detector::test(const std::vector<std::string>& names, char *cfgfile, char *weightfile, char *filename, float thresh)
+bool Detector::test(const char* datacfg, char *cfgfile, char *weightfile, char *filename, float thresh)
 {
+    // load object names
+    std::vector<std::string> names;
+    int obj_count = 0;
+    FILE* fp;
+    char buffer[255];
+    fp = fopen(datacfg, "r");
+    while (fgets(buffer, 255, (FILE*)fp))
+    {
+        buffer[strlen(buffer) - 1] = '\0';  // remove newline
+        names.push_back(buffer);
+    }
+    fclose(fp);
+
     if (!filename)
         return false;
 
@@ -264,7 +277,7 @@ bool Detector::test(const std::vector<std::string>& names, char *cfgfile, char *
 
 
 
-bool Detector::train(char **names, char *cfgfile, char *weightfile)
+bool Detector::train(const char* datacfg, char *cfgfile, char *weightfile)
 {
     return true;
 

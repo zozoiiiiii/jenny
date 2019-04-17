@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <stdlib.h>
 
 #include "box.h"
@@ -19,28 +19,23 @@ void run_detector(int argc, char **argv)
 
     int clear = 0;                // find_arg(argc, argv, "-clear");
 
-    char *obj_names = argv[3];
+    char *datacfg = argv[3];
     char *cfg = argv[4];
     char *weights = (argc > 5) ? argv[5] : 0;
     char *filename = (argc > 6) ? argv[6] : 0;
 
-    // load object names
-    std::vector<std::string> names;
-    int obj_count = 0;
-    FILE* fp;
-    char buffer[255];
-    fp = fopen(obj_names, "r");
-    while (fgets(buffer, 255, (FILE*)fp))
-    {
-        buffer[strlen(buffer) - 1] = '\0';  // remove newline
-        names.push_back(buffer);
-    }
-    fclose(fp);
 
     if (0 == strcmp(argv[2], "test"))
     {
-        //test_detector_cpu(names, cfg, weights, filename, thresh, quantized, dont_show);
-        JJ::Detector::instance()->test(names, cfg, weights, filename, thresh);
+        // detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 dog.jpg
+        JJ::Detector::instance()->test(datacfg, cfg, weights, filename, thresh);
+    }
+    else if(0 == strcmp(argv[2], "train"))
+    {
+        // https://github.com/PowerOfDream/yolo-transfer-demo
+        // 利用迁移学习来训练
+        // detector train coco.data yolov3-tiny.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map ? not begin yet.
+        JJ::Detector::instance()->train(datacfg, cfg, weights);
     }
 }
 
