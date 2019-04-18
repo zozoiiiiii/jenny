@@ -42,4 +42,15 @@ public:
     static void add_pixel(ImageData m, int x, int y, int c, float val);
     static ImageData copy_image(ImageData p);
     static void constrain_image(ImageData im);
+
+    static ImageData get_label_v3(ImageData **characters, char *string, int size);
+    static ImageData tile_images(ImageData a, ImageData b, int dx);
+    static ImageData border_image(ImageData a, int border);
+    static float get_pixel_extend(ImageUtil::ImageData m, int x, int y, int c);
+    static void fill_cpu(int N, float ALPHA, float *X, int INCX);
+    static void embed_image(ImageData source, ImageData dest, int dx, int dy);
+    static void composite_image(ImageData source, ImageData dest, int dx, int dy);
+    static void draw_label(ImageData a, int r, int c, ImageData label, const float *rgb);
+    static ImageData **load_alphabet();
+    static ImageUtil::ImageData load_image_color(char *filename, int w, int h);
 };

@@ -66,7 +66,8 @@ int compare_by_probs(const void *a_ptr, const void *b_ptr)
     return delta < 0 ? -1 : delta > 0 ? 1 : 0;
 }
 
-void Detector::draw_detections_v3(ImageUtil::ImageData im, detection *dets, int num, float thresh, const std::vector<std::string>& names, ImageUtil::ImageData **alphabet, int classes, int ext_output)
+void Detector::draw_detections_v3(ImageUtil::ImageData im, detection *dets, int num, float thresh, const std::vector<std::string>& names,
+    ImageUtil::ImageData **alphabet, int classes, int ext_output)
 {
     int selected_detections_num;
     detection_with_class* selected_detections = get_actual_detections(dets, num, thresh, &selected_detections_num);
@@ -95,7 +96,8 @@ void Detector::draw_detections_v3(ImageUtil::ImageData im, detection *dets, int 
 
     // ImageData output
     qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_probs);
-    for (i = 0; i < selected_detections_num; ++i) {
+    for (i = 0; i < selected_detections_num; ++i)
+    {
         int width = im.h * .006;
         if (width < 1)
             width = 1;
@@ -133,6 +135,24 @@ void Detector::draw_detections_v3(ImageUtil::ImageData im, detection *dets, int 
         if (bot > im.h - 1) bot = im.h - 1;
 
         ImageUtil::draw_box_width(im, left, top, right, bot, width, red, green, blue);
+
+
+        if (alphabet)
+        {
+            char labelstr[4096] = { 0 };
+            strcat(labelstr, names[selected_detections[i].best_class].c_str());
+            int j;
+            for (j = 0; j < classes; ++j) {
+                if (selected_detections[i].det.prob[j] > thresh && j != selected_detections[i].best_class) {
+                    strcat(labelstr, ", ");
+                    strcat(labelstr, names[j].c_str());
+                }
+            }
+            
+            ImageUtil::ImageData label = ImageUtil::get_label_v3(alphabet, labelstr, (im.h*.03));
+            ImageUtil::draw_label(im, top + width, left, label, rgb);
+            ImageUtil::free_image(label);
+        }
     }
     free(selected_detections);
 }
@@ -213,8 +233,7 @@ bool Detector::test(const char* datacfg, char *cfgfile, char *weightfile, char *
     if (!filename)
         return false;
 
-    //ImageData **alphabet = load_alphabet();            // image.c
-    ImageUtil::ImageData **alphabet = NULL;
+    ImageUtil::ImageData **alphabet = ImageUtil::load_alphabet();
 
     // 1. read config file, like convolution LayerData
     network* net = readConfigFile(cfgfile, 1);    // parser.c

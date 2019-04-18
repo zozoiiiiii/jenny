@@ -27,14 +27,14 @@ void run_detector(int argc, char **argv)
 
     if (0 == strcmp(argv[2], "test"))
     {
-        // detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 dog.jpg
+        // xxx.exe detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 dog.jpg
         JJ::Detector::instance()->test(datacfg, cfg, weights, filename, thresh);
     }
     else if(0 == strcmp(argv[2], "train"))
     {
         // https://github.com/PowerOfDream/yolo-transfer-demo
         // 利用迁移学习来训练
-        // detector train coco.data yolov3-tiny.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map ? not begin yet.
+        // xxx.exe detector train coco.data yolov3-tiny.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map ? not begin yet.
         JJ::Detector::instance()->train(datacfg, cfg, weights);
     }
 }

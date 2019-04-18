@@ -87,6 +87,123 @@ void ImageUtil::draw_box_width(ImageData a, int x1, int y1, int x2, int y2, int 
     }
 }
 
+float ImageUtil::get_pixel_extend(ImageUtil::ImageData m, int x, int y, int c)
+{
+    if (x < 0 || x >= m.w || y < 0 || y >= m.h) return 0;
+    /*
+    if(x < 0) x = 0;
+    if(x >= m.w) x = m.w-1;
+    if(y < 0) y = 0;
+    if(y >= m.h) y = m.h-1;
+    */
+    if (c < 0 || c >= m.c) return 0;
+    return get_pixel(m, x, y, c);
+}
+
+ImageUtil::ImageData ImageUtil::border_image(ImageData a, int border)
+{
+    ImageData b = make_image(a.w + 2 * border, a.h + 2 * border, a.c);
+    int x, y, k;
+    for (k = 0; k < b.c; ++k)
+    {
+        for (y = 0; y < b.h; ++y)
+        {
+            for (x = 0; x < b.w; ++x)
+            {
+                float val = get_pixel_extend(a, x - border, y - border, k);
+                if (x - border < 0 || x - border >= a.w || y - border < 0 || y - border >= a.h) val = 1;
+                set_pixel(b, x, y, k, val);
+            }
+        }
+    }
+    return b;
+}
+
+void ImageUtil::fill_cpu(int N, float ALPHA, float *X, int INCX)
+{
+    int i;
+    for (i = 0; i < N; ++i) X[i*INCX] = ALPHA;
+}
+
+
+void ImageUtil::embed_image(ImageData source, ImageData dest, int dx, int dy)
+{
+    int x, y, k;
+    for (k = 0; k < source.c; ++k) {
+        for (y = 0; y < source.h; ++y) {
+            for (x = 0; x < source.w; ++x) {
+                float val = get_pixel(source, x, y, k);
+                set_pixel(dest, dx + x, dy + y, k, val);
+            }
+        }
+    }
+}
+
+
+void ImageUtil::composite_image(ImageData source, ImageData dest, int dx, int dy)
+{
+    int x, y, k;
+    for (k = 0; k < source.c; ++k) {
+        for (y = 0; y < source.h; ++y) {
+            for (x = 0; x < source.w; ++x) {
+                float val = get_pixel(source, x, y, k);
+                float val2 = get_pixel_extend(dest, dx + x, dy + y, k);
+                set_pixel(dest, dx + x, dy + y, k, val * val2);
+            }
+        }
+    }
+}
+
+
+ImageUtil::ImageData ImageUtil::tile_images(ImageData a, ImageData b, int dx)
+{
+    if (a.w == 0)
+        return copy_image(b);
+
+    ImageData c = make_image(a.w + b.w + dx, (a.h > b.h) ? a.h : b.h, (a.c > b.c) ? a.c : b.c);
+    fill_cpu(c.w*c.h*c.c, 1, c.data, 1);
+    embed_image(a, c, 0, 0);
+    composite_image(b, c, a.w + dx, 0);
+    return c;
+}
+
+
+ImageUtil::ImageData ImageUtil::get_label_v3(ImageData **characters, char *string, int size)
+{
+    size = size / 10;
+    if (size > 7) size = 7;
+    ImageData label = make_empty_image(0, 0, 0);
+    while (*string)
+    {
+        ImageData l = characters[size][(int)*string];
+        ImageData n = tile_images(label, l, -size - 1 + (size + 1) / 2);
+        free_image(label);
+        label = n;
+        ++string;
+    }
+    ImageData b = border_image(label, label.h*.25);
+    free_image(label);
+    return b;
+}
+
+
+void ImageUtil::draw_label(ImageData a, int r, int c, ImageData label, const float *rgb)
+{
+    int w = label.w;
+    int h = label.h;
+    if (r - h >= 0) r = r - h;
+
+    int i, j, k;
+    for (j = 0; j < h && j + r < a.h; ++j) {
+        for (i = 0; i < w && i + c < a.w; ++i) {
+            for (k = 0; k < label.c; ++k) {
+                float val = get_pixel(label, i, j, k);
+                set_pixel(a, i + c, j + r, k, rgb[k] * val);
+            }
+        }
+    }
+}
+
 // image.c
 ImageUtil::ImageData ImageUtil::make_image(int w, int h, int c)
 {
@@ -265,4 +382,27 @@ float ImageUtil::get_color(int c, int x, int max)
     float r = (1 - ratio) * colors[i][c] + ratio * colors[j][c];
     //printf("%f\n", r);
     return r;
+}
+
+
+
+ImageUtil::ImageData ** ImageUtil::load_alphabet()
+{
+    int i, j;
+    const int nsize = 8;
+    ImageData** alphabets = (ImageData**)calloc(nsize, sizeof(ImageData*));
+    for (j = 0; j < nsize; ++j) {
+        alphabets[j] = (ImageData*)calloc(128, sizeof(ImageData));
+        for (i = 32; i < 127; ++i) {
+            char buff[256];
+            sprintf(buff, "data/labels/%d_%d.png", i, j);
+            alphabets[j][i] = load_image_color(buff, 0, 0);
+        }
+    }
+    return alphabets;
+}
+
+ImageUtil::ImageData ImageUtil::load_image_color(char *filename, int w, int h)
+{
+    return load_image(filename, w, h, 3);
 }
