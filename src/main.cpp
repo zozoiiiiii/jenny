@@ -24,9 +24,11 @@ void run_detector(int argc, char **argv)
     char *weights = (argc > 5) ? argv[5] : 0;
     char *filename = (argc > 6) ? argv[6] : 0;
 
-
+    // https://github.com/karolmajek/darknet,  after finish the detector test/train, compare different model like this website.
+    // like j_voc.cfg(j_voc.weight),  j_coco.cfg(j_coco.weight)
     if (0 == strcmp(argv[2], "test"))
     {
+        // use coco dataset to train the weight.
         // xxx.exe detector test coco.names yolov3-tiny.cfg yolov3-tiny.weights -thresh 0.2 dog.jpg
         JJ::Detector::instance()->test(datacfg, cfg, weights, filename, thresh);
     }
@@ -34,7 +36,8 @@ void run_detector(int argc, char **argv)
     {
         // https://github.com/PowerOfDream/yolo-transfer-demo
         // 利用迁移学习来训练
-        // xxx.exe detector train coco.data yolov3-tiny.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map ? not begin yet.
+        // darknet.exe detector train cfg/voc.data yolo-voc.cfg darknet19_448.conv.23
+        //xxx.exe detector train coco.data yolov3-tiny.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map ? not begin yet.
         JJ::Detector::instance()->train(datacfg, cfg, weights);
     }
 }

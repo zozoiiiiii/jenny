@@ -298,6 +298,7 @@ bool Detector::test(const char* datacfg, char *cfgfile, char *weightfile, char *
 
 bool Detector::train(const char* datacfg, char *cfgfile, char *weightfile)
 {
+
     return true;
 
 }
