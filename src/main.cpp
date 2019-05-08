@@ -1,4 +1,21 @@
-﻿#include <stdio.h>
+﻿/************************************************************************/
+/*
+@author:  junliang
+@brief:
+my deep learning code.
+fork from https://github.com/AlexeyAB/yolo2_light
+
+same code(web implementation): 
+https://blog.csdn.net/qq_14845119/article/details/84258945
+
+
+funny project:
+https://github.com/vipstone/faceai
+@time:    2019/04/29
+*/
+/************************************************************************/
+#pragma once
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "box.h"
